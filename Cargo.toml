@@ -1,0 +1,13 @@
+[package]
+name = "zl"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+zl-sys = { path = "zl-sys" }
+
+[build-dependencies]
+cc = "1.2.16"
+
+[workspace]
+members = ["zl-sys"]
