@@ -35,7 +35,7 @@ impl<'a, P: Frame> Function<'a, P> {
 impl<'a, P: Frame> Drop for Function<'a, P> {
     fn drop(&mut self) {
         if let Some(p) = self.0.take() {
-            unsafe { p.release_items(1) };
+            unsafe { p.release_values(1) };
         }
     }
 }

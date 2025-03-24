@@ -28,6 +28,6 @@ impl<'a, P: Frame> Table<'a, P> {
 
 impl<'a, P: Frame> Drop for Table<'a, P> {
     fn drop(&mut self) {
-        unsafe { self.0.release_items(1) };
+        unsafe { self.0.release_values(1) };
     }
 }

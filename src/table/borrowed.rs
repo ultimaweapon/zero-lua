@@ -39,7 +39,7 @@ impl<'a, P: Frame> Frame for BorrowedTable<'a, P> {
         self.parent.state()
     }
 
-    unsafe fn release_items(&mut self, n: c_int) {
+    unsafe fn release_values(&mut self, n: c_int) {
         unsafe { engine_pop(self.state(), n) };
     }
 }

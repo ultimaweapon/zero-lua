@@ -53,7 +53,7 @@ impl<'a, const N: u16, P: Frame> Drop for FixedRet<'a, N, P> {
     fn drop(&mut self) {
         if N > 0 {
             // SAFETY: This is safe because the requirement of FuncRet::new().
-            unsafe { self.0.release_items(N.into()) };
+            unsafe { self.0.release_values(N.into()) };
         }
     }
 }

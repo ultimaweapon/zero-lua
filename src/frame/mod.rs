@@ -130,8 +130,9 @@ pub trait Frame: Sized {
     fn state(&self) -> *mut lua_State;
 
     /// # Safety
-    /// `n` must be greater than zero and `n` items on the stack must be owned by the caller.
-    unsafe fn release_items(&mut self, n: c_int);
+    /// `n` must be greater than zero and `n` values on the top of stack must be owned by the
+    /// caller.
+    unsafe fn release_values(&mut self, n: c_int);
 }
 
 unsafe extern "C-unwind" fn invoker<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int

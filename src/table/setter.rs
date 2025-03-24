@@ -54,7 +54,7 @@ where
         self.table.0.state()
     }
 
-    unsafe fn release_items(&mut self, n: c_int) {
+    unsafe fn release_values(&mut self, n: c_int) {
         // All checks here should be optimized away in most cases since this method and new() should
         // be automatically inlined.
         let excess = n - 1;

@@ -123,7 +123,7 @@ impl Frame for FuncState {
         self.state
     }
 
-    unsafe fn release_items(&mut self, n: c_int) {
+    unsafe fn release_values(&mut self, n: c_int) {
         // SAFETY: We don't need to check for overflow here since we should get hit by a stack
         // overflow before c_int overflow.
         self.ret += n;

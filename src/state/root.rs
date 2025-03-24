@@ -26,7 +26,7 @@ impl Frame for RootState {
         self.state
     }
 
-    unsafe fn release_items(&mut self, n: c_int) {
+    unsafe fn release_values(&mut self, n: c_int) {
         unsafe { engine_pop(self.state, n) };
     }
 }
