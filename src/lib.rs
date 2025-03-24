@@ -28,3 +28,14 @@ pub enum Value<'a, P: Frame> {
     Table(Table<'a, P>),
     Function(Function<'a, P>),
 }
+
+impl<'a, P: Frame> Value<'a, P> {
+    pub fn ty(&self) -> Type {
+        match self {
+            Self::Nil(_) => Type::Nil,
+            Self::String(_) => Type::String,
+            Self::Table(_) => Type::Table,
+            Self::Function(_) => Type::Function,
+        }
+    }
+}
