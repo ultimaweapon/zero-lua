@@ -21,8 +21,8 @@ impl<'a, P: Frame> Table<'a, P> {
     /// Calling this method without pushing a value to [`TableSetter`] does nothing.
     ///
     /// Note that the returned [`TableSetter`] only keep the last pushed value.
-    pub fn set<I: TableIndex>(&mut self, index: I) -> TableSetter<'_, 'a, P, I> {
-        unsafe { TableSetter::new(self, index) }
+    pub fn set<K: TableKey>(&mut self, key: K) -> TableSetter<'_, 'a, P, K> {
+        unsafe { TableSetter::new(self, key) }
     }
 }
 
@@ -32,28 +32,28 @@ impl<'a, P: Frame> Drop for Table<'a, P> {
     }
 }
 
-/// Index into a Lua table.
-pub trait TableIndex: Copy {
-    unsafe fn get(self, state: *mut lua_State, table: c_int) -> Type;
-    unsafe fn set(self, state: *mut lua_State, table: c_int);
+/// Key to lookup for a value in the table.
+pub trait TableKey {
+    unsafe fn get(&self, state: *mut lua_State, table: c_int) -> Type;
+    unsafe fn set(&self, state: *mut lua_State, table: c_int);
 }
 
-impl TableIndex for i64 {
-    unsafe fn get(self, state: *mut lua_State, table: c_int) -> Type {
-        unsafe { lua54_geti(state, table, self) }
+impl TableKey for i64 {
+    unsafe fn get(&self, state: *mut lua_State, table: c_int) -> Type {
+        unsafe { lua54_geti(state, table, *self) }
     }
 
-    unsafe fn set(self, state: *mut lua_State, table: c_int) {
-        unsafe { lua54_seti(state, table, self) };
+    unsafe fn set(&self, state: *mut lua_State, table: c_int) {
+        unsafe { lua54_seti(state, table, *self) };
     }
 }
 
-impl TableIndex for &CStr {
-    unsafe fn get(self, state: *mut lua_State, table: c_int) -> Type {
+impl TableKey for &CStr {
+    unsafe fn get(&self, state: *mut lua_State, table: c_int) -> Type {
         unsafe { lua54_getfield(state, table, self.as_ptr()) }
     }
 
-    unsafe fn set(self, state: *mut lua_State, table: c_int) {
+    unsafe fn set(&self, state: *mut lua_State, table: c_int) {
         unsafe { engine_setfield(state, table, self.as_ptr()) };
     }
 }

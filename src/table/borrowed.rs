@@ -1,4 +1,4 @@
-use super::{Table, TableIndex};
+use super::{Table, TableKey};
 use crate::ffi::{engine_pop, lua_State};
 use crate::{Frame, Function, Nil, Type, Value};
 use std::ffi::c_int;
@@ -18,8 +18,8 @@ impl<'a, P: Frame> BorrowedTable<'a, P> {
         Self { parent, index }
     }
 
-    pub fn get<I: TableIndex>(&mut self, index: I) -> Value<Self> {
-        match unsafe { index.get(self.parent.state(), self.index) } {
+    pub fn get<K: TableKey>(&mut self, key: K) -> Value<Self> {
+        match unsafe { key.get(self.parent.state(), self.index) } {
             Type::None => unreachable!(),
             Type::Nil => Value::Nil(unsafe { Nil::new(self) }),
             Type::Boolean => todo!(),
