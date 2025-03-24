@@ -1,6 +1,10 @@
+pub use self::msg::*;
+
+use crate::{Frame, TableKey, Value};
 use std::borrow::Cow;
-use std::ffi::{CStr, c_int};
-use std::fmt::Write;
+use std::ffi::c_int;
+
+mod msg;
 
 /// Represents an error when Lua function that defined on Rust side fails.
 ///
@@ -10,7 +14,7 @@ pub struct Error(ErrorKind);
 impl Error {
     /// # Panics
     /// If `arg` is zero or negative.
-    pub fn ty(arg: c_int, expect: impl Into<ErrorMsg>) -> Self {
+    pub fn arg_type(arg: c_int, expect: impl Into<ErrorMsg>) -> Self {
         assert!(arg > 0);
 
         Self(ErrorKind::ArgType(arg, expect.into().into()))
@@ -23,6 +27,8 @@ impl Error {
         let mut src = e.source();
 
         while let Some(e) = src {
+            use std::fmt::Write;
+
             write!(msg, " -> {e}").unwrap();
             src = e.source();
         }
@@ -38,6 +44,32 @@ impl Error {
         Self(ErrorKind::Arg(arg, msg.into().into()))
     }
 
+    /// # Panics
+    /// If `arg` is zero or negative.
+    pub fn arg_table_type<P>(
+        arg: c_int,
+        expect: impl AsRef<[u8]>,
+        key: impl TableKey,
+        mut val: Value<P>,
+    ) -> Self
+    where
+        P: Frame,
+    {
+        use std::io::Write;
+
+        let mut m = Vec::new();
+
+        m.extend_from_slice(expect.as_ref());
+        m.extend_from_slice(b" expected on key ");
+
+        write!(m, "{}", key.display()).unwrap();
+
+        m.extend_from_slice(b", got ");
+        m.extend_from_slice(val.name().to_bytes());
+
+        Self::arg(arg, ErrorMsg::Dynamic(m))
+    }
+
     /// `msg` are typically concise lowercase sentences without trailing punctuation (e.g. `failed
     /// to open 'foo'`).
     pub fn other(msg: impl Into<ErrorMsg>) -> Self {
@@ -51,6 +83,8 @@ impl Error {
         let mut src: Option<&dyn std::error::Error> = Some(&src);
 
         while let Some(e) = src {
+            use std::fmt::Write;
+
             write!(msg, " -> {e}").unwrap();
             src = e.source();
         }
@@ -68,37 +102,6 @@ impl From<String> for Error {
 impl<E: std::error::Error> From<(String, E)> for Error {
     fn from(value: (String, E)) -> Self {
         Self::with_source(value.0, value.1)
-    }
-}
-
-/// Encapsulates a message for [`Error`].
-pub enum ErrorMsg {
-    Static(&'static CStr),
-    String(String),
-}
-
-impl From<&'static CStr> for ErrorMsg {
-    fn from(value: &'static CStr) -> Self {
-        Self::Static(value)
-    }
-}
-
-impl From<String> for ErrorMsg {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
-}
-
-impl From<ErrorMsg> for Cow<'static, [u8]> {
-    fn from(value: ErrorMsg) -> Self {
-        let mut v = match value {
-            ErrorMsg::Static(v) => return Cow::Borrowed(v.to_bytes_with_nul()),
-            ErrorMsg::String(v) => v.into_bytes(),
-        };
-
-        v.push(0);
-
-        Cow::Owned(v)
     }
 }
 

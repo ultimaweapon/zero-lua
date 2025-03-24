@@ -24,6 +24,10 @@ impl<'a, P: Frame> Table<'a, P> {
     pub fn set<K: TableKey>(&mut self, key: K) -> TableSetter<'_, 'a, P, K> {
         unsafe { TableSetter::new(self, key) }
     }
+
+    pub(crate) fn parent(&mut self) -> &mut P {
+        self.0
+    }
 }
 
 impl<'a, P: Frame> Drop for Table<'a, P> {

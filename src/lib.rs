@@ -8,6 +8,10 @@ pub use self::string::*;
 pub use self::table::*;
 pub use self::ty::*;
 
+use self::ffi::{engine_pop, zl_getmetafield};
+use std::borrow::Cow;
+use std::ffi::CStr;
+
 mod error;
 mod ffi;
 mod frame;
@@ -22,6 +26,7 @@ mod ty;
 extern crate zl_sys; // Required since no Rust code references this crate.
 
 /// Encapsulates a value in the stack.
+#[non_exhaustive]
 pub enum Value<'a, P: Frame> {
     Nil(Nil<'a, P>),
     String(String<'a, P>),
@@ -37,5 +42,24 @@ impl<'a, P: Frame> Value<'a, P> {
             Self::Table(_) => Type::Table,
             Self::Function(_) => Type::Function,
         }
+    }
+
+    pub fn name(&mut self) -> Cow<'static, CStr> {
+        // This is the same algorithm as luaL_typeerror.
+        match self {
+            Self::Table(v) => {
+                match unsafe { zl_getmetafield(v.parent().state(), -1, c"__name".as_ptr()) } {
+                    Type::None => unreachable!(),
+                    Type::Nil => (), // luaL_getmetafield push nothing.
+                    Type::String => {
+                        return unsafe { crate::String::new(v.parent()).get().to_owned().into() };
+                    }
+                    _ => unsafe { engine_pop(v.parent().state(), 1) },
+                }
+            }
+            _ => (),
+        }
+
+        Cow::Borrowed(self.ty().name())
     }
 }

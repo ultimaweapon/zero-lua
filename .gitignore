@@ -1,2 +1,4 @@
+/.cache/
 /Cargo.lock
+/compile_commands.json
 /target

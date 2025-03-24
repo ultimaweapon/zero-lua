@@ -19,6 +19,13 @@ pub enum Type {
     Thread,
 }
 
+impl Type {
+    pub fn name(self) -> &'static CStr {
+        // SAFETY: Lua does not use L.
+        unsafe { CStr::from_ptr(lua54_typename(null_mut(), self)) }
+    }
+}
+
 impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str((*self).into())
@@ -27,11 +34,7 @@ impl Display for Type {
 
 impl From<Type> for &'static str {
     fn from(value: Type) -> Self {
-        // SAFETY: Lua does not use L.
-        let v = unsafe { lua54_typename(null_mut(), value) };
-        let v = unsafe { CStr::from_ptr(v) };
-
         // SAFETY: All type name returned from lua54_typename are UTF-8 and has static storage.
-        unsafe { std::str::from_utf8_unchecked(v.to_bytes()) }
+        unsafe { std::str::from_utf8_unchecked(value.name().to_bytes()) }
     }
 }

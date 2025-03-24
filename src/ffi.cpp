@@ -169,6 +169,11 @@ extern "C" void engine_setmetatable(lua_State *L, int index)
     lua_setmetatable(L, index);
 }
 
+extern "C" int zl_getmetafield(lua_State *L, int obj, const char *e)
+{
+    return luaL_getmetafield(L, obj, e);
+}
+
 extern "C" int engine_upvalueindex(int i)
 {
     return lua_upvalueindex(i);
