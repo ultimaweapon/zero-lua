@@ -4,7 +4,7 @@ use crate::ffi::{
     engine_require_os, engine_setfield, engine_setmetatable, engine_touserdata,
     engine_upvalueindex, lua_State, lua54_typeerror, zl_load,
 };
-use crate::{Error, ErrorKind, FuncState, Function, GlobalSetter, Nil, Table};
+use crate::{Error, ErrorKind, FuncState, Function, GlobalSetter, Nil, Str, Table};
 use std::ffi::{CStr, c_int};
 use std::panic::UnwindSafe;
 use std::path::Path;
@@ -32,7 +32,7 @@ pub trait Frame: Sized {
     fn load_file(
         &mut self,
         file: impl AsRef<Path>,
-    ) -> Result<Result<Function<Self>, crate::String<Self>>, std::io::Error> {
+    ) -> Result<Result<Function<Self>, Str<Self>>, std::io::Error> {
         // SAFETY: engine_load return either error object or a chunk.
         unsafe { engine_checkstack(self.state(), 1) };
 
@@ -52,7 +52,7 @@ pub trait Frame: Sized {
         let name = name.as_ptr().cast();
         let r = match unsafe { zl_load(self.state(), name, data.as_ptr().cast(), data.len()) } {
             true => Ok(unsafe { Function::new(self) }),
-            false => Err(unsafe { crate::String::new(self) }),
+            false => Err(unsafe { Str::new(self) }),
         };
 
         Ok(r)
@@ -65,11 +65,11 @@ pub trait Frame: Sized {
         unsafe { Nil::new(self) }
     }
 
-    fn push_string(&mut self, s: impl AsRef<CStr>) -> crate::String<Self> {
+    fn push_string(&mut self, s: impl AsRef<CStr>) -> Str<Self> {
         unsafe { engine_checkstack(self.state(), 1) };
         unsafe { engine_pushstring(self.state(), s.as_ref().as_ptr()) };
 
-        unsafe { crate::String::new(self) }
+        unsafe { Str::new(self) }
     }
 
     /// See [`FuncState`] for how to return the values to Lua.

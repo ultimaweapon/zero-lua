@@ -1,7 +1,7 @@
 pub use self::ret::*;
 
-use crate::Frame;
 use crate::ffi::{engine_checkstack, engine_pcall};
+use crate::{Frame, Str};
 
 mod ret;
 
@@ -15,7 +15,7 @@ impl<'a, P: Frame> Function<'a, P> {
         Self(Some(p))
     }
 
-    pub fn call<R: FuncRet<'a, P>>(mut self) -> Result<R, crate::String<'a, P>> {
+    pub fn call<R: FuncRet<'a, P>>(mut self) -> Result<R, Str<'a, P>> {
         // Ensure stack for results. We can't take out the parent here since engine_checkstack can
         // throw a C++ exception.
         if R::N > 0 {
@@ -27,7 +27,7 @@ impl<'a, P: Frame> Function<'a, P> {
 
         match unsafe { engine_pcall(p.state(), 0, R::N, 0) } {
             true => Ok(unsafe { R::new(p) }),
-            false => Err(unsafe { crate::String::new(p) }),
+            false => Err(unsafe { Str::new(p) }),
         }
     }
 }

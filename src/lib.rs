@@ -8,7 +8,7 @@ pub use self::string::*;
 pub use self::table::*;
 pub use self::ty::*;
 
-use self::ffi::{engine_pop, zl_getmetafield};
+use self::ffi::{engine_checkstack, engine_pop, zl_getmetafield};
 use std::borrow::Cow;
 use std::ffi::CStr;
 
@@ -29,7 +29,7 @@ extern crate zl_sys; // Required since no Rust code references this crate.
 #[non_exhaustive]
 pub enum Value<'a, P: Frame> {
     Nil(Nil<'a, P>),
-    String(String<'a, P>),
+    String(Str<'a, P>),
     Table(Table<'a, P>),
     Function(Function<'a, P>),
 }
@@ -48,12 +48,12 @@ impl<'a, P: Frame> Value<'a, P> {
         // This is the same algorithm as luaL_typeerror.
         match self {
             Self::Table(v) => {
+                unsafe { engine_checkstack(v.state(), 1) };
+
                 match unsafe { zl_getmetafield(v.state(), -1, c"__name".as_ptr()) } {
                     Type::None => unreachable!(),
                     Type::Nil => (), // luaL_getmetafield push nothing.
-                    Type::String => {
-                        return unsafe { crate::String::new(v).get().to_owned().into() };
-                    }
+                    Type::String => return unsafe { Str::new(v).get().to_owned().into() },
                     _ => unsafe { engine_pop(v.state(), 1) },
                 }
             }

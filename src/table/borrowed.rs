@@ -1,6 +1,6 @@
 use super::{Table, TableKey};
-use crate::ffi::{engine_pop, lua_State};
-use crate::{Frame, Function, Nil, Type, Value};
+use crate::ffi::{engine_checkstack, engine_pop, lua_State};
+use crate::{Frame, Function, Nil, Str, Type, Value};
 use std::ffi::c_int;
 
 /// Encapsulates a borrowed table in the stack.
@@ -19,13 +19,15 @@ impl<'a, P: Frame> BorrowedTable<'a, P> {
     }
 
     pub fn get<K: TableKey>(&mut self, key: K) -> Value<Self> {
+        unsafe { engine_checkstack(self.state(), 1) };
+
         match unsafe { key.get_value(self.parent.state(), self.index) } {
             Type::None => unreachable!(),
             Type::Nil => Value::Nil(unsafe { Nil::new(self) }),
             Type::Boolean => todo!(),
             Type::LightUserData => todo!(),
             Type::Number => todo!(),
-            Type::String => Value::String(unsafe { crate::String::new(self) }),
+            Type::String => Value::String(unsafe { Str::new(self) }),
             Type::Table => Value::Table(unsafe { Table::new(self) }),
             Type::Function => Value::Function(unsafe { Function::new(self) }),
             Type::UserData => todo!(),

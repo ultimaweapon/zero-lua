@@ -1,5 +1,7 @@
 # Zero Lua
 
+Zero Lua is a Rust bindings to Lua 5.4 with 100% safety guarantee and zero overhead in most parts. Thanks to Rust borrow checker and RAII, Zero Lua able to expose stack-based Lua API to the user without losing safety guarantee. When using Zero Lua without unsafe code you should never run into any UB.
+
 ## Development
 
 ### Generate compile_commands.json (Linux and macOS)
