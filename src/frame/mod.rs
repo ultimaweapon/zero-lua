@@ -1,8 +1,8 @@
 use crate::ffi::{
     engine_argerror, engine_checkstack, engine_createtable, engine_error, engine_gettop,
-    engine_load, engine_newuserdatauv, engine_pushcclosure, engine_pushnil, engine_pushstring,
+    engine_newuserdatauv, engine_pushcclosure, engine_pushnil, engine_pushstring,
     engine_require_os, engine_setfield, engine_setmetatable, engine_touserdata,
-    engine_upvalueindex, lua_State, lua54_typeerror,
+    engine_upvalueindex, lua_State, lua54_typeerror, zl_load,
 };
 use crate::{Error, ErrorKind, FuncState, Function, GlobalSetter, Nil, Table};
 use std::ffi::{CStr, c_int};
@@ -50,7 +50,7 @@ pub trait Frame: Sized {
 
         // Load.
         let name = name.as_ptr().cast();
-        let r = match unsafe { engine_load(self.state(), name, data.as_ptr().cast(), data.len()) } {
+        let r = match unsafe { zl_load(self.state(), name, data.as_ptr().cast(), data.len()) } {
             true => Ok(unsafe { Function::new(self) }),
             false => Err(unsafe { crate::String::new(self) }),
         };

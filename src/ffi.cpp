@@ -49,9 +49,9 @@ extern "C" void engine_require_os(lua_State *L)
     luaL_requiref(L, LUA_OSLIBNAME, luaopen_os, 1);
 }
 
-extern "C" bool engine_load(lua_State *L, const char *name, const char *script, size_t len)
+extern "C" bool zl_load(lua_State *L, const char *name, const char *chunk, size_t len)
 {
-    return luaL_loadbufferx(L, script, len, name, "t") == LUA_OK;
+    return luaL_loadbuffer(L, chunk, len, name) == LUA_OK;
 }
 
 extern "C" bool engine_pcall(lua_State *L, int nargs, int nresults, int msgh)

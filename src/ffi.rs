@@ -9,10 +9,10 @@ unsafe extern "C-unwind" {
     pub safe fn lua54_newstate() -> *mut lua_State;
     pub fn lua54_close(L: *mut lua_State);
     pub fn engine_require_os(L: *mut lua_State);
-    pub fn engine_load(
+    pub fn zl_load(
         L: *mut lua_State,
         name: *const c_char,
-        script: *const c_char,
+        chunk: *const c_char,
         len: usize,
     ) -> bool;
     pub fn engine_pcall(L: *mut lua_State, nargs: c_int, nresults: c_int, msgh: c_int) -> bool;
