@@ -19,7 +19,7 @@ impl<'a, P: Frame> BorrowedTable<'a, P> {
     }
 
     pub fn get<K: TableKey>(&mut self, key: K) -> Value<Self> {
-        match unsafe { key.get(self.parent.state(), self.index) } {
+        match unsafe { key.get_value(self.parent.state(), self.index) } {
             Type::None => unreachable!(),
             Type::Nil => Value::Nil(unsafe { Nil::new(self) }),
             Type::Boolean => todo!(),

@@ -40,7 +40,7 @@ where
 {
     fn drop(&mut self) {
         if self.has_value {
-            unsafe { self.key.set(self.table.0.state(), -2) };
+            unsafe { self.key.set_value(self.table.state(), -2) };
         }
     }
 }
@@ -51,7 +51,7 @@ where
     K: TableKey,
 {
     fn state(&self) -> *mut lua_State {
-        self.table.0.state()
+        self.table.state()
     }
 
     unsafe fn release_values(&mut self, n: c_int) {

@@ -3,6 +3,8 @@ pub use self::key::*;
 pub use self::setter::*;
 
 use crate::Frame;
+use crate::ffi::{engine_pop, lua_State};
+use std::ffi::c_int;
 
 mod borrowed;
 mod key;
@@ -24,14 +26,20 @@ impl<'a, P: Frame> Table<'a, P> {
     pub fn set<K: TableKey>(&mut self, key: K) -> TableSetter<'_, 'a, P, K> {
         unsafe { TableSetter::new(self, key) }
     }
-
-    pub(crate) fn parent(&mut self) -> &mut P {
-        self.0
-    }
 }
 
 impl<'a, P: Frame> Drop for Table<'a, P> {
     fn drop(&mut self) {
         unsafe { self.0.release_values(1) };
+    }
+}
+
+impl<'a, P: Frame> Frame for Table<'a, P> {
+    fn state(&self) -> *mut lua_State {
+        self.0.state()
+    }
+
+    unsafe fn release_values(&mut self, n: c_int) {
+        unsafe { engine_pop(self.state(), n) };
     }
 }

@@ -48,13 +48,13 @@ impl<'a, P: Frame> Value<'a, P> {
         // This is the same algorithm as luaL_typeerror.
         match self {
             Self::Table(v) => {
-                match unsafe { zl_getmetafield(v.parent().state(), -1, c"__name".as_ptr()) } {
+                match unsafe { zl_getmetafield(v.state(), -1, c"__name".as_ptr()) } {
                     Type::None => unreachable!(),
                     Type::Nil => (), // luaL_getmetafield push nothing.
                     Type::String => {
-                        return unsafe { crate::String::new(v.parent()).get().to_owned().into() };
+                        return unsafe { crate::String::new(v).get().to_owned().into() };
                     }
-                    _ => unsafe { engine_pop(v.parent().state(), 1) },
+                    _ => unsafe { engine_pop(v.state(), 1) },
                 }
             }
             _ => (),
