@@ -48,24 +48,58 @@ impl Error {
     /// If `arg` is zero or negative.
     pub fn arg_table_type<P>(
         arg: c_int,
-        expect: impl AsRef<[u8]>,
         key: impl TableKey,
+        expect: impl AsRef<[u8]>,
         mut val: Value<P>,
     ) -> Self
     where
         P: Frame,
     {
-        use std::io::Write;
-
         let mut m = Vec::new();
 
+        m.push(b'[');
+        key.display_to(&mut m);
+        m.extend_from_slice(b"]: ");
         m.extend_from_slice(expect.as_ref());
-        m.extend_from_slice(b" expected on key ");
-
-        write!(m, "{}", key.display()).unwrap();
-
-        m.extend_from_slice(b", got ");
+        m.extend_from_slice(b" expected, got ");
         m.extend_from_slice(val.name().to_bytes());
+
+        Self::arg(arg, ErrorMsg::Dynamic(m))
+    }
+
+    /// # Panics
+    /// If `arg` is zero or negative.
+    pub fn arg_table_from_std(arg: c_int, key: impl TableKey, e: impl std::error::Error) -> Self {
+        use std::io::Write;
+
+        // Write prefix.
+        let mut m = Vec::new();
+
+        m.push(b'[');
+        key.display_to(&mut m);
+
+        write!(m, "]: {}", e).unwrap();
+
+        // Write nested errors.
+        let mut src = e.source();
+
+        while let Some(e) = src {
+            write!(m, " -> {e}").unwrap();
+            src = e.source();
+        }
+
+        Self::arg(arg, ErrorMsg::Dynamic(m))
+    }
+
+    /// # Panics
+    /// If `arg` is zero or negative.
+    pub fn arg_table(arg: c_int, key: impl TableKey, msg: impl AsRef<[u8]>) -> Self {
+        let mut m = Vec::new();
+
+        m.push(b'[');
+        key.display_to(&mut m);
+        m.extend_from_slice(b"]: ");
+        m.extend_from_slice(msg.as_ref());
 
         Self::arg(arg, ErrorMsg::Dynamic(m))
     }
