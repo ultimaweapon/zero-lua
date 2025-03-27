@@ -1,8 +1,9 @@
-use crate::ffi::{engine_tostring, zl_tolstring};
+use crate::ffi::zl_tolstring;
 use crate::{Frame, FromOption, OptionError};
 use std::ffi::CStr;
+use std::ptr::null_mut;
 
-/// Encapsulates an owned string in the stack.
+/// Represents a string on the top of stack.
 pub struct Str<'a, P: Frame>(&'a mut P);
 
 impl<'a, P: Frame> Str<'a, P> {
@@ -26,8 +27,8 @@ impl<'a, P: Frame> Str<'a, P> {
         T::from_option(v).ok_or_else(|| OptionError::new(v))
     }
 
-    pub fn get(&self) -> &CStr {
-        unsafe { CStr::from_ptr(engine_tostring(self.0.state(), -1)) }
+    pub fn to_c_str(&self) -> &CStr {
+        unsafe { CStr::from_ptr(zl_tolstring(self.0.state(), -1, null_mut())) }
     }
 }
 

@@ -13,6 +13,7 @@ pub use zl_macros::*;
 use self::ffi::{engine_checkstack, engine_pop, zl_getmetafield};
 use std::borrow::Cow;
 use std::ffi::CStr;
+use std::mem::transmute;
 
 mod error;
 mod ffi;
@@ -30,21 +31,18 @@ extern crate zl_sys; // Required since no Rust code references this crate.
 
 /// Encapsulates a value in the stack.
 #[non_exhaustive]
+#[repr(i32)]
 pub enum Value<'a, P: Frame> {
-    Nil(Nil<'a, P>),
-    String(Str<'a, P>),
-    Table(Table<'a, P>),
-    Function(Function<'a, P>),
+    Nil(Nil<'a, P>) = 0,
+    String(Str<'a, P>) = 4,
+    Table(Table<'a, P>) = 5,
+    Function(Function<'a, P>) = 6,
 }
 
 impl<'a, P: Frame> Value<'a, P> {
     pub fn ty(&self) -> Type {
-        match self {
-            Self::Nil(_) => Type::Nil,
-            Self::String(_) => Type::String,
-            Self::Table(_) => Type::Table,
-            Self::Function(_) => Type::Function,
-        }
+        // SAFETY: Value has repr(i32).
+        unsafe { transmute((self as *const Self as *const i32).read()) }
     }
 
     pub fn name(&mut self) -> Cow<'static, CStr> {
@@ -56,7 +54,7 @@ impl<'a, P: Frame> Value<'a, P> {
                 match unsafe { zl_getmetafield(v.state(), -1, c"__name".as_ptr()) } {
                     Type::None => unreachable!(),
                     Type::Nil => (), // luaL_getmetafield push nothing.
-                    Type::String => return unsafe { Str::new(v).get().to_owned().into() },
+                    Type::String => return unsafe { Str::new(v).to_c_str().to_owned().into() },
                     _ => unsafe { engine_pop(v.state(), 1) },
                 }
             }
