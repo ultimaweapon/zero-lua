@@ -1,7 +1,8 @@
 use crate::ffi::{
-    engine_argerror, engine_isnil, lua_State, lua54_istable, zl_checklstring, zl_tolstring,
+    engine_argerror, engine_error, engine_isnil, lua_State, lua54_istable, lua54_typeerror,
+    zl_checklstring, zl_tolstring,
 };
-use crate::{BorrowedTable, Frame};
+use crate::{BorrowedTable, Error, ErrorKind, Frame};
 use std::ffi::c_int;
 
 /// Encapsulates a `lua_State` passed to `lua_CFunction`.
@@ -44,16 +45,14 @@ impl FuncState {
         }
     }
 
-    /// Get string argument or raise a Lua error is the argument cannot convert to a string.
-    ///
-    /// The returned slice will **not** contain the trailing NUL terminator. However, it is
-    /// guarantee there is a NUL past the end.
+    /// Get UTF-8 string argument or raise a Lua error if the argument cannot convert to a UTF-8
+    /// string.
     ///
     /// This method always raise a Lua error if `n` is not a function argument.
     ///
     /// # Panics
     /// If `n` is zero or negative.
-    pub fn to_string<'a, 'b: 'a>(&'b self, n: c_int) -> &'a [u8] {
+    pub fn to_str<'a, 'b: 'a>(&'b self, n: c_int) -> &'a str {
         assert!(n > 0);
 
         if n > self.args {
@@ -64,21 +63,24 @@ impl FuncState {
 
         // SAFETY: luaL_checklstring never return null.
         let mut l = 0;
-        let s = unsafe { zl_checklstring(self.state, n, &mut l) };
+        let v = unsafe { zl_checklstring(self.state, n, &mut l) };
+        let v = unsafe { std::slice::from_raw_parts(v.cast(), l) };
 
-        unsafe { std::slice::from_raw_parts(s.cast(), l) }
+        match std::str::from_utf8(v) {
+            Ok(v) => v,
+            Err(e) => self.raise(Error::arg_from_std(n, e)),
+        }
     }
 
-    /// Get string argument or returns [`None`] if the argument cannot convert to a string.
+    /// Get UTF-8 string argument or raise a Lua error if the argument is a string but not valid
+    /// UTF-8.
     ///
-    /// The returned slice will **not** contain the trailing NUL terminator. However, it is
-    /// guarantee there is a NUL past the end.
-    ///
-    /// This method always return [`None`] if `n` is not a function argument.
+    /// This method return [`None`] if the argument is not a string or `n` is not a function
+    /// argument.
     ///
     /// # Panics
     /// If `n` is zero or negative.
-    pub fn try_string<'a, 'b: 'a>(&'b self, n: c_int) -> Option<&'a [u8]> {
+    pub fn try_str<'a, 'b: 'a>(&'b self, n: c_int) -> Option<&'a str> {
         assert!(n > 0);
 
         if n > self.args {
@@ -93,7 +95,13 @@ impl FuncState {
             return None;
         }
 
-        Some(unsafe { std::slice::from_raw_parts(v.cast(), l) })
+        // Check if UTF-8.
+        let v = unsafe { std::slice::from_raw_parts(v.cast(), l) };
+
+        match std::str::from_utf8(v) {
+            Ok(v) => Some(v),
+            Err(e) => self.raise(Error::arg_from_std(n, e)),
+        }
     }
 
     /// Get table argument or returns [`None`] if the argument is not a table.
@@ -116,7 +124,25 @@ impl FuncState {
         self.ret
     }
 
-    pub(crate) fn arg_out_of_bound(&self, n: c_int, expect: &[u8]) -> ! {
+    pub(crate) fn raise(&self, e: Error) -> ! {
+        let (n, e) = match e.into() {
+            // SAFETY: n only used to format the message.
+            ErrorKind::Arg(n, e) => unsafe { engine_argerror(self.state, n, e.as_ptr().cast()) },
+            ErrorKind::ArgType(n, e) => (n, e),
+            ErrorKind::Other(e) => unsafe { engine_error(self.state, e.as_ptr().cast()) },
+        };
+
+        if n <= self.args {
+            // SAFETY: n is positive.
+            unsafe { lua54_typeerror(self.state, n, e.as_ptr().cast()) };
+        } else {
+            // lua54_typeerror require index to be valid so we need to emulate its behavior in this
+            // case.
+            self.arg_out_of_bound(n, &e[..(e.len() - 1)]);
+        }
+    }
+
+    fn arg_out_of_bound(&self, n: c_int, expect: &[u8]) -> ! {
         let s = b" expected, got nil";
         let mut m = Vec::with_capacity(expect.len() + s.len() + 1);
 

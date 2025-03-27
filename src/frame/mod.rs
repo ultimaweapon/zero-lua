@@ -1,10 +1,9 @@
 use crate::ffi::{
-    engine_argerror, engine_checkstack, engine_createtable, engine_error, engine_gettop,
-    engine_newuserdatauv, engine_pushcclosure, engine_pushnil, engine_pushstring, engine_setfield,
-    engine_setmetatable, engine_touserdata, engine_upvalueindex, lua_State, lua54_typeerror,
-    zl_load, zl_require_os,
+    engine_checkstack, engine_createtable, engine_gettop, engine_newuserdatauv,
+    engine_pushcclosure, engine_pushnil, engine_pushstring, engine_setfield, engine_setmetatable,
+    engine_touserdata, engine_upvalueindex, lua_State, zl_load, zl_require_os,
 };
-use crate::{Error, ErrorKind, FuncState, Function, GlobalSetter, Nil, Str, Table};
+use crate::{Error, FuncState, Function, GlobalSetter, Nil, Str, Table};
 use std::ffi::{CStr, c_int};
 use std::panic::UnwindSafe;
 use std::path::Path;
@@ -146,26 +145,10 @@ where
     // Invoke.
     let cb = unsafe { engine_upvalueindex(1) };
     let cb = unsafe { engine_touserdata(L, cb).cast::<F>().cast_const() };
-    let e = match unsafe { (*cb)(&mut lua) } {
-        Ok(_) => return lua.into_results(),
-        Err(e) => ErrorKind::from(e),
-    };
 
-    // Raise error.
-    let (n, e) = match e {
-        // SAFETY: n only used to format the message.
-        ErrorKind::Arg(n, e) => unsafe { engine_argerror(L, n, e.as_ptr().cast()) },
-        ErrorKind::ArgType(n, e) => (n, e),
-        ErrorKind::Other(e) => unsafe { engine_error(L, e.as_ptr().cast()) },
-    };
-
-    if n <= args {
-        // SAFETY: n is positive.
-        unsafe { lua54_typeerror(L, n, e.as_ptr().cast()) };
-    } else {
-        // lua54_typeerror require index to be valid so we need to emulate its behavior in this
-        // case.
-        lua.arg_out_of_bound(n, &e[..(e.len() - 1)]);
+    match unsafe { (*cb)(&mut lua) } {
+        Ok(_) => lua.into_results(),
+        Err(e) => lua.raise(e),
     }
 }
 
