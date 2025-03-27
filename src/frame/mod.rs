@@ -1,8 +1,8 @@
 use crate::ffi::{
     engine_argerror, engine_checkstack, engine_createtable, engine_error, engine_gettop,
-    engine_newuserdatauv, engine_pushcclosure, engine_pushnil, engine_pushstring,
-    engine_require_os, engine_setfield, engine_setmetatable, engine_touserdata,
-    engine_upvalueindex, lua_State, lua54_typeerror, zl_load,
+    engine_newuserdatauv, engine_pushcclosure, engine_pushnil, engine_pushstring, engine_setfield,
+    engine_setmetatable, engine_touserdata, engine_upvalueindex, lua_State, lua54_typeerror,
+    zl_load, zl_require_os,
 };
 use crate::{Error, ErrorKind, FuncState, Function, GlobalSetter, Nil, Str, Table};
 use std::ffi::{CStr, c_int};
@@ -19,7 +19,7 @@ pub trait Frame: Sized {
     fn require_os(&mut self) -> Table<Self> {
         // SAFETY: 3 is maximum stack size used by engine_require_os.
         unsafe { engine_checkstack(self.state(), 3) };
-        unsafe { engine_require_os(self.state()) };
+        unsafe { zl_require_os(self.state()) };
 
         unsafe { Table::new(self) }
     }
@@ -75,7 +75,7 @@ pub trait Frame: Sized {
     /// See [`FuncState`] for how to return the values to Lua.
     fn push_fn<F>(&mut self, f: F) -> Function<Self>
     where
-        F: FnMut(&mut FuncState) -> Result<(), Error> + UnwindSafe + 'static,
+        F: Fn(&mut FuncState) -> Result<(), Error> + UnwindSafe + 'static,
     {
         // SAFETY: 3 is maximum items we pushed here.
         unsafe { engine_checkstack(self.state(), 3) };
@@ -137,7 +137,7 @@ pub trait Frame: Sized {
 
 unsafe extern "C-unwind" fn invoker<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
 where
-    F: FnMut(&mut FuncState) -> Result<(), Error> + UnwindSafe + 'static,
+    F: Fn(&mut FuncState) -> Result<(), Error> + UnwindSafe + 'static,
 {
     // Setup FuncState.
     let args = unsafe { engine_gettop(L) };
@@ -145,7 +145,7 @@ where
 
     // Invoke.
     let cb = unsafe { engine_upvalueindex(1) };
-    let cb = unsafe { engine_touserdata(L, cb).cast::<F>() };
+    let cb = unsafe { engine_touserdata(L, cb).cast::<F>().cast_const() };
     let e = match unsafe { (*cb)(&mut lua) } {
         Ok(_) => return lua.into_results(),
         Err(e) => ErrorKind::from(e),

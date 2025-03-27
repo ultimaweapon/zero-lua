@@ -44,7 +44,7 @@ extern "C" void lua54_close(lua_State *L)
     lua_close(L);
 }
 
-extern "C" void engine_require_os(lua_State *L)
+extern "C" void zl_require_os(lua_State *L)
 {
     luaL_requiref(L, LUA_OSLIBNAME, luaopen_os, 1);
 }
