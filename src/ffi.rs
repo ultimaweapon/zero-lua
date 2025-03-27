@@ -32,6 +32,7 @@ unsafe extern "C-unwind" {
     pub fn lua54_istable(L: *mut lua_State, index: c_int) -> bool;
     pub fn engine_tointegerx(L: *mut lua_State, index: c_int, isnum: *mut c_int) -> i64;
     pub fn engine_tostring(L: *mut lua_State, index: c_int) -> *const c_char;
+    pub fn zl_tolstring(L: *mut lua_State, index: c_int, len: *mut usize) -> *const c_char;
     pub fn engine_touserdata(L: *mut lua_State, index: c_int) -> *mut u8;
     pub fn lua54_type(L: *mut lua_State, index: c_int) -> Type;
     pub fn lua54_typename(L: *mut lua_State, tp: Type) -> *const c_char;

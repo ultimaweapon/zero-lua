@@ -1,5 +1,5 @@
-use crate::Frame;
-use crate::ffi::engine_tostring;
+use crate::ffi::{engine_tostring, zl_tolstring};
+use crate::{Frame, FromOption, OptionError};
 use std::ffi::CStr;
 
 /// Encapsulates an owned string in the stack.
@@ -10,6 +10,20 @@ impl<'a, P: Frame> Str<'a, P> {
     /// Top of the stack must be a string.
     pub(crate) unsafe fn new(p: &'a mut P) -> Self {
         Self(p)
+    }
+
+    /// The returned slice will **not** contain the trailing NUL terminator.
+    pub fn to_bytes(&self) -> &[u8] {
+        let mut len = 0;
+        let ptr = unsafe { zl_tolstring(self.0.state(), -1, &mut len) };
+
+        unsafe { std::slice::from_raw_parts(ptr.cast(), len) }
+    }
+
+    pub fn to_option<T: FromOption>(&self) -> Result<T, OptionError> {
+        let v = self.to_bytes();
+
+        T::from_option(v).ok_or_else(|| OptionError::new(v))
     }
 
     pub fn get(&self) -> &CStr {

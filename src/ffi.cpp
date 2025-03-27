@@ -119,6 +119,11 @@ extern "C" const char *engine_tostring(lua_State *L, int index)
     return lua_tostring(L, index);
 }
 
+extern "C" const char *zl_tolstring(lua_State *L, int index, size_t *len)
+{
+    return lua_tolstring(L, index, len);
+}
+
 extern "C" void *engine_touserdata(lua_State *L, int index)
 {
     return lua_touserdata(L, index);
