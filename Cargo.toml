@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 zl-macros = { path = "macros" }
-zl-sys = { path = "zl-sys" }
+zl-sys = { path = "sys" }
 
 [build-dependencies]
 cc = "1.2.16"
@@ -13,5 +13,5 @@ cc = "1.2.16"
 [workspace]
 members = [
     "macros",
-    "zl-sys"
+    "sys"
 ]
