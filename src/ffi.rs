@@ -25,13 +25,12 @@ unsafe extern "C-unwind" {
         n: c_int,
     );
     pub fn engine_gettop(L: *mut lua_State) -> c_int;
-    pub fn engine_checkstring(L: *mut lua_State, arg: c_int) -> *const c_char;
+    pub fn zl_checklstring(L: *mut lua_State, arg: c_int, l: *mut usize) -> *const c_char;
     pub fn lua54_typeerror(L: *mut lua_State, arg: c_int, tname: *const c_char) -> !;
     pub fn engine_argerror(L: *mut lua_State, arg: c_int, extramsg: *const c_char) -> !;
     pub fn engine_isnil(L: *mut lua_State, index: c_int) -> bool;
     pub fn lua54_istable(L: *mut lua_State, index: c_int) -> bool;
     pub fn engine_tointegerx(L: *mut lua_State, index: c_int, isnum: *mut c_int) -> i64;
-    pub fn engine_tostring(L: *mut lua_State, index: c_int) -> *const c_char;
     pub fn zl_tolstring(L: *mut lua_State, index: c_int, len: *mut usize) -> *const c_char;
     pub fn engine_touserdata(L: *mut lua_State, index: c_int) -> *mut u8;
     pub fn lua54_type(L: *mut lua_State, index: c_int) -> Type;

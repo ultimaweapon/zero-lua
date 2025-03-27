@@ -84,9 +84,9 @@ extern "C" int engine_gettop(lua_State *L)
     return lua_gettop(L);
 }
 
-extern "C" const char *engine_checkstring(lua_State *L, int arg)
+extern "C" const char *zl_checklstring(lua_State *L, int arg, size_t *l)
 {
-    return luaL_checkstring(L, arg);
+    return luaL_checklstring(L, arg, l);
 }
 
 extern "C" void lua54_typeerror(lua_State *L, int arg, const char *tname)
@@ -112,11 +112,6 @@ extern "C" bool lua54_istable(lua_State *L, int index)
 extern "C" int64_t engine_tointegerx(lua_State *L, int index, int *isnum)
 {
     return static_cast<int64_t>(lua_tointegerx(L, index, isnum));
-}
-
-extern "C" const char *engine_tostring(lua_State *L, int index)
-{
-    return lua_tostring(L, index);
 }
 
 extern "C" const char *zl_tolstring(lua_State *L, int index, size_t *len)

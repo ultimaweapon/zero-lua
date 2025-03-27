@@ -1,8 +1,8 @@
 use crate::ffi::{
-    engine_argerror, engine_checkstring, engine_isnil, engine_tostring, lua_State, lua54_istable,
+    engine_argerror, engine_isnil, lua_State, lua54_istable, zl_checklstring, zl_tolstring,
 };
 use crate::{BorrowedTable, Frame};
-use std::ffi::{CStr, c_int};
+use std::ffi::c_int;
 
 /// Encapsulates a `lua_State` passed to `lua_CFunction`.
 ///
@@ -44,13 +44,16 @@ impl FuncState {
         }
     }
 
-    /// Get string argument or raise a Lua error is the argument cannot convert to string.
+    /// Get string argument or raise a Lua error is the argument cannot convert to a string.
+    ///
+    /// The returned slice will **not** contain the trailing NUL terminator. However, it is
+    /// guarantee there is a NUL past the end.
     ///
     /// This method always raise a Lua error if `n` is not a function argument.
     ///
     /// # Panics
     /// If `n` is zero or negative.
-    pub fn get_string<'a, 'b: 'a>(&'b self, n: c_int) -> &'a CStr {
+    pub fn to_string<'a, 'b: 'a>(&'b self, n: c_int) -> &'a [u8] {
         assert!(n > 0);
 
         if n > self.args {
@@ -59,17 +62,23 @@ impl FuncState {
             self.arg_out_of_bound(n, b"string");
         }
 
-        // SAFETY: engine_checkstring never return null.
-        unsafe { CStr::from_ptr(engine_checkstring(self.state, n)) }
+        // SAFETY: luaL_checklstring never return null.
+        let mut l = 0;
+        let s = unsafe { zl_checklstring(self.state, n, &mut l) };
+
+        unsafe { std::slice::from_raw_parts(s.cast(), l) }
     }
 
-    /// Get string argument or returns [`None`] if the argument cannot convert to string.
+    /// Get string argument or returns [`None`] if the argument cannot convert to a string.
+    ///
+    /// The returned slice will **not** contain the trailing NUL terminator. However, it is
+    /// guarantee there is a NUL past the end.
     ///
     /// This method always return [`None`] if `n` is not a function argument.
     ///
     /// # Panics
     /// If `n` is zero or negative.
-    pub fn try_string<'a, 'b: 'a>(&'b self, n: c_int) -> Option<&'a CStr> {
+    pub fn try_string<'a, 'b: 'a>(&'b self, n: c_int) -> Option<&'a [u8]> {
         assert!(n > 0);
 
         if n > self.args {
@@ -77,13 +86,14 @@ impl FuncState {
         }
 
         // Get value.
-        let v = unsafe { engine_tostring(self.state, n) };
+        let mut l = 0;
+        let v = unsafe { zl_tolstring(self.state, n, &mut l) };
 
         if v.is_null() {
             return None;
         }
 
-        Some(unsafe { CStr::from_ptr(v) })
+        Some(unsafe { std::slice::from_raw_parts(v.cast(), l) })
     }
 
     /// Get table argument or returns [`None`] if the argument is not a table.

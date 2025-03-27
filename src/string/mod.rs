@@ -13,7 +13,8 @@ impl<'a, P: Frame> Str<'a, P> {
         Self(p)
     }
 
-    /// The returned slice will **not** contain the trailing NUL terminator.
+    /// The returned slice will **not** contain the trailing NUL terminator. However, it is
+    /// guarantee there is a NUL past the end.
     pub fn to_bytes(&self) -> &[u8] {
         let mut len = 0;
         let ptr = unsafe { zl_tolstring(self.0.state(), -1, &mut len) };
