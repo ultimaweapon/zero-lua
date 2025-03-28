@@ -39,7 +39,7 @@ extern "C" lua_State *lua54_newstate()
     return L;
 }
 
-extern "C" void lua54_close(lua_State *L)
+extern "C" void zl_close(lua_State *L)
 {
     lua_close(L);
 }

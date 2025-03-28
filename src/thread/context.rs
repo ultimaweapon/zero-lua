@@ -106,6 +106,25 @@ impl Context {
         }
     }
 
+    /// Get table argument or raise a Lua error if the argument is not a table.
+    ///
+    /// This method always raise a Lua error if `n` is not a function argument.
+    ///
+    /// # Panics
+    /// If `n` is zero or negative.
+    pub fn to_table(&mut self, n: c_int) -> BorrowedTable<Self> {
+        assert!(n > 0);
+
+        if n > self.args {
+            // lua_istable require a valid index so we need to emulate its behavior in this case.
+            self.arg_out_of_bound(n, b"table");
+        } else if !unsafe { lua54_istable(self.state, n) } {
+            unsafe { lua54_typeerror(self.state, n, c"table".as_ptr()) };
+        }
+
+        unsafe { BorrowedTable::new(self, n) }
+    }
+
     /// Get table argument or returns [`None`] if the argument is not a table.
     ///
     /// This method always return [`None`] if `n` is not a function argument.
@@ -126,6 +145,7 @@ impl Context {
         self.ret
     }
 
+    #[inline(never)]
     pub(crate) fn raise(&self, e: Error) -> ! {
         let (n, e) = match e.into() {
             // SAFETY: n only used to format the message.
@@ -144,6 +164,7 @@ impl Context {
         }
     }
 
+    #[inline(never)]
     fn arg_out_of_bound(&self, n: c_int, expect: &[u8]) -> ! {
         let s = b" expected, got nil";
         let mut m = Vec::with_capacity(expect.len() + s.len() + 1);

@@ -1,7 +1,7 @@
 pub use self::context::*;
 
 use crate::Frame;
-use crate::ffi::{engine_pop, lua_State, lua54_close, lua54_newstate};
+use crate::ffi::{engine_pop, lua_State, lua54_newstate, zl_close};
 use std::ffi::c_int;
 
 mod context;
@@ -17,7 +17,7 @@ impl Lua {
 
 impl Drop for Lua {
     fn drop(&mut self) {
-        unsafe { lua54_close(self.0) };
+        unsafe { zl_close(self.0) };
     }
 }
 

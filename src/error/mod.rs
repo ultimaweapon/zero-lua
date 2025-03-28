@@ -22,6 +22,7 @@ impl Error {
 
     /// # Panics
     /// If `arg` is zero or negative.
+    #[inline(never)]
     pub fn arg_from_std(arg: c_int, e: impl std::error::Error) -> Self {
         let mut msg = e.to_string();
         let mut src = e.source();
