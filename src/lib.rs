@@ -7,6 +7,7 @@ pub use self::option::*;
 pub use self::state::*;
 pub use self::string::*;
 pub use self::table::*;
+pub use self::thread::*;
 pub use self::ty::*;
 pub use zl_macros::*;
 
@@ -25,6 +26,7 @@ mod option;
 mod state;
 mod string;
 mod table;
+mod thread;
 mod ty;
 
 extern crate zl_sys; // Required since no Rust code references this crate.
