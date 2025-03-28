@@ -69,9 +69,9 @@ extern "C" void engine_pushnil(lua_State *L)
     lua_pushnil(L);
 }
 
-extern "C" const char *engine_pushstring(lua_State *L, const char *s)
+extern "C" const char *zl_pushlstring(lua_State *L, const char *s, size_t len)
 {
-    return lua_pushstring(L, s);
+    return lua_pushlstring(L, s, len);
 }
 
 extern "C" void engine_pushcclosure(lua_State *L, int (*fn) (lua_State *L), int n)

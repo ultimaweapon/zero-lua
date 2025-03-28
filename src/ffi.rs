@@ -18,7 +18,7 @@ unsafe extern "C-unwind" {
     pub fn engine_pcall(L: *mut lua_State, nargs: c_int, nresults: c_int, msgh: c_int) -> bool;
     pub fn engine_checkstack(L: *mut lua_State, n: c_int);
     pub fn engine_pushnil(L: *mut lua_State);
-    pub fn engine_pushstring(L: *mut lua_State, s: *const c_char) -> *const c_char;
+    pub fn zl_pushlstring(L: *mut lua_State, s: *const c_char, len: usize) -> *const c_char;
     pub fn engine_pushcclosure(
         L: *mut lua_State,
         fp: unsafe extern "C-unwind" fn(*mut lua_State) -> c_int,

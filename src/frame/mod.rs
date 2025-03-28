@@ -1,7 +1,7 @@
 use crate::ffi::{
     engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pushcclosure,
-    engine_pushnil, engine_pushstring, engine_setfield, engine_setmetatable, engine_touserdata,
-    engine_upvalueindex, lua_State, zl_load, zl_require_os,
+    engine_pushnil, engine_setfield, engine_setmetatable, engine_touserdata, engine_upvalueindex,
+    lua_State, zl_load, zl_pushlstring, zl_require_os,
 };
 use crate::{Context, Error, Function, GlobalSetter, Nil, Str, Table};
 use std::ffi::{CStr, c_int};
@@ -64,9 +64,11 @@ pub trait Frame: Sized {
         unsafe { Nil::new(self) }
     }
 
-    fn push_string(&mut self, s: impl AsRef<CStr>) -> Str<Self> {
+    fn push_str(&mut self, s: impl AsRef<[u8]>) -> Str<Self> {
+        let s = s.as_ref();
+
         unsafe { engine_checkstack(self.state(), 1) };
-        unsafe { engine_pushstring(self.state(), s.as_ref().as_ptr()) };
+        unsafe { zl_pushlstring(self.state(), s.as_ptr().cast(), s.len()) };
 
         unsafe { Str::new(self) }
     }
