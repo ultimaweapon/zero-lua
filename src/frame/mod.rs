@@ -1,9 +1,9 @@
 use crate::ffi::{
-    engine_checkstack, engine_createtable, engine_gettop, engine_newuserdatauv,
-    engine_pushcclosure, engine_pushnil, engine_pushstring, engine_setfield, engine_setmetatable,
-    engine_touserdata, engine_upvalueindex, lua_State, zl_load, zl_require_os,
+    engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pushcclosure,
+    engine_pushnil, engine_pushstring, engine_setfield, engine_setmetatable, engine_touserdata,
+    engine_upvalueindex, lua_State, zl_load, zl_require_os,
 };
-use crate::{Error, FuncState, Function, GlobalSetter, Nil, Str, Table};
+use crate::{Context, Error, Function, GlobalSetter, Nil, Str, Table};
 use std::ffi::{CStr, c_int};
 use std::panic::UnwindSafe;
 use std::path::Path;
@@ -71,10 +71,10 @@ pub trait Frame: Sized {
         unsafe { Str::new(self) }
     }
 
-    /// See [`FuncState`] for how to return the values to Lua.
+    /// See [`Context`] for how to return some values to Lua.
     fn push_fn<F>(&mut self, f: F) -> Function<Self>
     where
-        F: Fn(&mut FuncState) -> Result<(), Error> + UnwindSafe + 'static,
+        F: Fn(&mut Context) -> Result<(), Error> + UnwindSafe + 'static,
     {
         // SAFETY: 3 is maximum items we pushed here.
         unsafe { engine_checkstack(self.state(), 3) };
@@ -136,19 +136,15 @@ pub trait Frame: Sized {
 
 unsafe extern "C-unwind" fn invoker<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
 where
-    F: Fn(&mut FuncState) -> Result<(), Error> + UnwindSafe + 'static,
+    F: Fn(&mut Context) -> Result<(), Error> + UnwindSafe + 'static,
 {
-    // Setup FuncState.
-    let args = unsafe { engine_gettop(L) };
-    let mut lua = unsafe { FuncState::new(L, args) };
-
-    // Invoke.
+    let mut cx = unsafe { Context::new(L) };
     let cb = unsafe { engine_upvalueindex(1) };
     let cb = unsafe { engine_touserdata(L, cb).cast::<F>().cast_const() };
 
-    match unsafe { (*cb)(&mut lua) } {
-        Ok(_) => lua.into_results(),
-        Err(e) => lua.raise(e),
+    match unsafe { (*cb)(&mut cx) } {
+        Ok(_) => cx.into_results(),
+        Err(e) => cx.raise(e),
     }
 }
 

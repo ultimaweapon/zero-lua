@@ -1,6 +1,10 @@
+pub use self::context::*;
+
 use crate::Frame;
 use crate::ffi::{engine_pop, lua_State, lua54_close, lua54_newstate};
 use std::ffi::c_int;
+
+mod context;
 
 /// Encapsulates a `lua_State` created by `lua_newstate`.
 pub struct Lua(*mut lua_State);

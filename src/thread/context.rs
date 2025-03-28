@@ -1,6 +1,6 @@
 use crate::ffi::{
-    engine_argerror, engine_error, engine_isnil, lua_State, lua54_istable, lua54_typeerror,
-    zl_checklstring, zl_tolstring,
+    engine_argerror, engine_error, engine_gettop, engine_isnil, lua_State, lua54_istable,
+    lua54_typeerror, zl_checklstring, zl_tolstring,
 };
 use crate::{BorrowedTable, Error, ErrorKind, Frame};
 use std::ffi::c_int;
@@ -8,14 +8,16 @@ use std::ffi::c_int;
 /// Encapsulates a `lua_State` passed to `lua_CFunction`.
 ///
 /// All values pushed directly to this struct will become function results.
-pub struct FuncState {
+pub struct Context {
     state: *mut lua_State,
     args: c_int,
     ret: c_int,
 }
 
-impl FuncState {
-    pub(crate) unsafe fn new(state: *mut lua_State, args: c_int) -> Self {
+impl Context {
+    pub(crate) unsafe fn new(state: *mut lua_State) -> Self {
+        let args = unsafe { engine_gettop(state) };
+
         Self {
             state,
             args,
@@ -154,7 +156,7 @@ impl FuncState {
     }
 }
 
-impl Frame for FuncState {
+impl Frame for Context {
     fn state(&self) -> *mut lua_State {
         self.state
     }
