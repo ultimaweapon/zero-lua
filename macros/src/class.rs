@@ -58,7 +58,7 @@ pub fn transform(item: ItemImpl) -> syn::Result<TokenStream> {
 
         count += 1;
         setters.extend(quote_spanned! {span=>
-            t.set(#name).push_fn(Self::ident);
+            t.set(#name).push_fn(Self::#ident);
         });
     }
 
