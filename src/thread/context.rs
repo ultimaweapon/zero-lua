@@ -6,17 +6,19 @@ use crate::ffi::{
 use crate::{BorrowedTable, Error, ErrorKind, Frame, UserData, is_boxed};
 use std::any::TypeId;
 use std::ffi::c_int;
+use std::marker::PhantomData;
 
 /// Encapsulates a `lua_State` passed to `lua_CFunction`.
 ///
 /// All values pushed directly to this struct will become function results.
-pub struct Context {
+pub struct Context<'a> {
     state: *mut lua_State,
     args: c_int,
     ret: c_int,
+    phantom: PhantomData<&'a ()>,
 }
 
-impl Context {
+impl<'a> Context<'a> {
     pub(crate) unsafe fn new(state: *mut lua_State) -> Self {
         let args = unsafe { engine_gettop(state) };
 
@@ -24,6 +26,7 @@ impl Context {
             state,
             args,
             ret: 0,
+            phantom: PhantomData,
         }
     }
 
@@ -56,7 +59,7 @@ impl Context {
     ///
     /// # Panics
     /// If `n` is zero or negative.
-    pub fn to_str<'a, 'b: 'a>(&'b self, n: c_int) -> &'a str {
+    pub fn to_str(&self, n: c_int) -> &'a str {
         assert!(n > 0);
 
         if n > self.args {
@@ -84,7 +87,7 @@ impl Context {
     ///
     /// # Panics
     /// If `n` is zero or negative.
-    pub fn try_str<'a, 'b: 'a>(&'b self, n: c_int) -> Option<&'a str> {
+    pub fn try_str(&self, n: c_int) -> Option<&'a str> {
         assert!(n > 0);
 
         if n > self.args {
@@ -145,7 +148,7 @@ impl Context {
 
     /// # Panics
     /// If `n` is zero or negative.
-    pub fn to_ud<'a, 'b: 'a, T: UserData>(&'b self, n: c_int) -> &'a T {
+    pub fn to_ud<T: UserData>(&self, n: c_int) -> &'a T {
         assert!(n > 0);
 
         if n > self.args {
@@ -215,7 +218,7 @@ impl Context {
     }
 }
 
-impl Frame for Context {
+impl<'a> Frame for Context<'a> {
     fn state(&self) -> *mut lua_State {
         self.state
     }
