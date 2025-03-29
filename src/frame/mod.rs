@@ -102,7 +102,9 @@ pub trait Frame: Sized {
         // SAFETY: 3 is maximum items we pushed here.
         unsafe { engine_checkstack(self.state(), 3) };
 
-        if align_of::<F>() <= align_of::<*mut ()>() {
+        if size_of::<F>() == 0 {
+            unsafe { engine_pushcclosure(self.state(), invoker::<F>, 0) };
+        } else if align_of::<F>() <= align_of::<*mut ()>() {
             // Move Rust function to Lua user data.
             let ptr = unsafe { engine_newuserdatauv(self.state(), size_of::<F>(), 0) };
 
@@ -227,8 +229,13 @@ where
     F: Fn(&mut Context) -> Result<(), Error> + RefUnwindSafe + 'static,
 {
     let mut cx = unsafe { Context::new(L) };
-    let cb = unsafe { engine_upvalueindex(1) };
-    let cb = unsafe { engine_touserdata(L, cb).cast::<F>().cast_const() };
+    let cb = if size_of::<F>() == 0 {
+        std::ptr::dangling::<F>()
+    } else {
+        let cb = unsafe { engine_upvalueindex(1) };
+
+        unsafe { engine_touserdata(L, cb).cast::<F>().cast_const() }
+    };
 
     match unsafe { (*cb)(&mut cx) } {
         Ok(_) => cx.into_results(),
