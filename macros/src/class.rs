@@ -52,13 +52,13 @@ pub fn transform(item: ItemImpl) -> syn::Result<TokenStream> {
 
         // Get function name.
         let ident = &f.sig.ident;
-        let span = Span::call_site();
+        let span = Span::mixed_site();
         let name = CString::new(ident.to_string().replace('_', "")).unwrap();
         let name = LitCStr::new(&name, Span::call_site());
 
         count += 1;
         setters.extend(quote_spanned! {span=>
-            t.set(#name).push_fn(Self::#ident);
+            t.set(#name).push_fn(|cx| cx.to_ud::<Self>().#ident(cx));
         });
     }
 
