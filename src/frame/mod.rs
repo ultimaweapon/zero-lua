@@ -2,7 +2,7 @@ use crate::ffi::{
     engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop, engine_pushcclosure,
     engine_pushnil, engine_setfield, engine_touserdata, engine_upvalueindex, lua_State,
     lua54_getfield, zl_load, zl_newmetatable, zl_pushlstring, zl_require_base,
-    zl_require_coroutine, zl_require_os, zl_setmetatable,
+    zl_require_coroutine, zl_require_io, zl_require_os, zl_setmetatable,
 };
 use crate::{
     Context, Error, Function, GlobalSetter, Nil, Str, Table, UserData, UserValue, is_boxed,
@@ -32,6 +32,14 @@ pub trait Frame: Sized {
         // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_coroutine.
         unsafe { engine_checkstack(self.state(), 3) };
         unsafe { zl_require_coroutine(self.state(), global) };
+
+        unsafe { Table::new(self) }
+    }
+
+    fn require_io(&mut self, global: bool) -> Table<Self> {
+        // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_io.
+        unsafe { engine_checkstack(self.state(), 3) };
+        unsafe { zl_require_io(self.state(), global) };
 
         unsafe { Table::new(self) }
     }

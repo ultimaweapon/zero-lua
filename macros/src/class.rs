@@ -52,7 +52,7 @@ pub fn transform(item: ItemImpl) -> syn::Result<TokenStream> {
 
         // Get function name.
         let ident = &f.sig.ident;
-        let span = Span::mixed_site();
+        let span = Span::call_site().located_at(ident.span());
         let name = CString::new(ident.to_string().replace('_', "")).unwrap();
         let name = LitCStr::new(&name, Span::call_site());
 
