@@ -1,8 +1,10 @@
 use crate::ffi::{
-    engine_argerror, engine_error, engine_gettop, engine_isnil, lua_State, lua54_istable,
-    lua54_typeerror, zl_checklstring, zl_tolstring,
+    engine_argerror, engine_error, engine_gettop, engine_isnil, engine_pop, engine_touserdata,
+    lua_State, lua54_getfield, lua54_istable, lua54_typeerror, zl_checklstring, zl_getmetatable,
+    zl_tolstring,
 };
-use crate::{BorrowedTable, Error, ErrorKind, Frame};
+use crate::{BorrowedTable, Error, ErrorKind, Frame, UserData, is_boxed};
+use std::any::TypeId;
 use std::ffi::c_int;
 
 /// Encapsulates a `lua_State` passed to `lua_CFunction`.
@@ -139,6 +141,42 @@ impl Context {
         }
 
         Some(unsafe { BorrowedTable::new(self, n) })
+    }
+
+    /// # Panics
+    /// If `n` is zero or negative.
+    pub fn to_ud<'a, 'b: 'a, T: UserData>(&'b self, n: c_int) -> &'a T {
+        assert!(n > 0);
+
+        if n > self.args {
+            // lua_touserdata require a valid index so we need to emulate luaL_checkudata behavior
+            // in this case.
+            self.arg_out_of_bound(n, T::name().to_bytes());
+        }
+
+        // We emulate luaL_checkudata here since we need to get additional field from metatable.
+        let ptr = unsafe { engine_touserdata(self.state, n).cast_const() };
+
+        if ptr.is_null() || unsafe { zl_getmetatable(self.state, n) == 0 } {
+            unsafe { lua54_typeerror(self.state, n, T::name().as_ptr()) };
+        }
+
+        unsafe { lua54_getfield(self.state, -1, c"typeid".as_ptr()) };
+
+        // SAFETY: TypeId is Copy.
+        let id = TypeId::of::<T>();
+        let ud = unsafe { engine_touserdata(self.state, -1) };
+        let ok = unsafe { !ud.is_null() && ud.cast::<TypeId>().read_unaligned() == id };
+
+        unsafe { engine_pop(self.state, 2) };
+
+        if !ok {
+            unsafe { lua54_typeerror(self.state, n, T::name().as_ptr()) };
+        } else if is_boxed::<T>() {
+            unsafe { (*ptr.cast::<Box<T>>()).as_ref() }
+        } else {
+            unsafe { &*ptr.cast::<T>() }
+        }
     }
 
     pub(crate) fn into_results(self) -> c_int {

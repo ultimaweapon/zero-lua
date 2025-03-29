@@ -182,6 +182,11 @@ extern "C" void zl_setmetatable(lua_State *L, int index)
     lua_setmetatable(L, index);
 }
 
+extern "C" int zl_getmetatable(lua_State *L, int index)
+{
+    return lua_getmetatable(L, index);
+}
+
 extern "C" int zl_getmetafield(lua_State *L, int obj, const char *e)
 {
     return luaL_getmetafield(L, obj, e);
