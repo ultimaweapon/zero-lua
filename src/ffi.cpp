@@ -164,6 +164,11 @@ extern "C" void *engine_newuserdatauv(lua_State *L, size_t size, int nuvalue)
     return lua_newuserdatauv(L, size, nuvalue);
 }
 
+extern "C" int zl_newmetatable(lua_State *L, const char *tname)
+{
+    return luaL_newmetatable(L, tname);
+}
+
 extern "C" void engine_setmetatable(lua_State *L, int index)
 {
     lua_setmetatable(L, index);

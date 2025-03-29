@@ -1,10 +1,14 @@
 use crate::ffi::{
-    engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pushcclosure,
+    engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop, engine_pushcclosure,
     engine_pushnil, engine_setfield, engine_setmetatable, engine_touserdata, engine_upvalueindex,
-    lua_State, zl_load, zl_pushlstring, zl_require_os,
+    lua_State, lua54_getfield, zl_load, zl_newmetatable, zl_pushlstring, zl_require_os,
 };
-use crate::{Context, Error, Function, GlobalSetter, Nil, Str, Table};
+use crate::{
+    Context, Error, Function, GlobalSetter, Nil, Str, Table, UserData, UserValue, is_boxed,
+};
+use std::any::TypeId;
 use std::ffi::{CStr, c_int};
+use std::mem::ManuallyDrop;
 use std::panic::UnwindSafe;
 use std::path::Path;
 
@@ -123,6 +127,28 @@ pub trait Frame: Sized {
         unsafe { Table::new(self) }
     }
 
+    /// # Panics
+    /// If [`UserData::name()`] on `T` is duplicated with the other type.
+    fn push_ud<T: UserData>(&mut self, v: T) -> UserValue<Self> {
+        // SAFETY: Maximum pushed from luaL_newmetatable is 2.
+        unsafe { engine_checkstack(self.state(), 3) };
+
+        if is_boxed::<T>() {
+            let ptr = unsafe { engine_newuserdatauv(self.state(), size_of::<Box<T>>(), 0) };
+
+            unsafe { ptr.cast::<Box<T>>().write(v.into()) };
+        } else {
+            let ptr = unsafe { engine_newuserdatauv(self.state(), size_of::<T>(), 0) };
+
+            unsafe { ptr.cast::<T>().write(v) };
+        }
+
+        unsafe { push_metatable::<Self, T>(self) };
+        unsafe { engine_setmetatable(self.state(), -1) };
+
+        unsafe { UserValue::new(self) }
+    }
+
     /// Returns a `lua_State` this frame belong to.
     ///
     /// This is a low-level method. Using the returned `lua_State` incorrectly will violate safety
@@ -134,6 +160,49 @@ pub trait Frame: Sized {
     /// `n` must be greater than zero and `n` values on the top of stack must be owned by the
     /// caller.
     unsafe fn release_values(&mut self, n: c_int);
+}
+
+#[inline(never)]
+unsafe fn push_metatable<F: Frame, T: UserData>(f: &mut F) {
+    // Check if exists.
+    let id = TypeId::of::<T>();
+
+    if unsafe { zl_newmetatable(f.state(), T::name().as_ptr()) == 0 } {
+        // SAFETY: Checking field type does not really give us 100% safe. The only cases
+        // "typeid" is not our value are either:
+        //
+        // 1. Our user use lua_State wrong.
+        // 2. We screw ourself.
+        //
+        // The first case required unsafe code and the second case is our own bug.
+        unsafe { lua54_getfield(f.state(), -1, c"typeid".as_ptr()) };
+
+        // SAFETY: TypeId is Copy.
+        let ud = unsafe { engine_touserdata(f.state(), -1) };
+
+        assert_eq!(unsafe { ud.cast::<TypeId>().read_unaligned() }, id);
+
+        unsafe { engine_pop(f.state(), 1) };
+        return;
+    }
+
+    // Setup metatable.
+    T::setup_metatable(&mut ManuallyDrop::new(unsafe { Table::new(f) }));
+
+    // Set "typeid".
+    let ud = unsafe { engine_newuserdatauv(f.state(), size_of::<TypeId>(), 0) };
+
+    unsafe { ud.cast::<TypeId>().write_unaligned(id) };
+    unsafe { engine_setfield(f.state(), -2, c"typeid".as_ptr()) };
+
+    // Set finalizer.
+    if is_boxed::<T>() {
+        unsafe { engine_pushcclosure(f.state(), finalizer::<Box<T>>, 0) };
+        unsafe { engine_setfield(f.state(), -2, c"__gc".as_ptr()) };
+    } else if std::mem::needs_drop::<T>() {
+        unsafe { engine_pushcclosure(f.state(), finalizer::<T>, 0) };
+        unsafe { engine_setfield(f.state(), -2, c"__gc".as_ptr()) };
+    }
 }
 
 unsafe extern "C-unwind" fn invoker<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
@@ -150,8 +219,8 @@ where
     }
 }
 
-unsafe extern "C-unwind" fn finalizer<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int {
-    let ptr = unsafe { engine_touserdata(L, 1).cast::<F>() };
+unsafe extern "C-unwind" fn finalizer<T>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int {
+    let ptr = unsafe { engine_touserdata(L, 1).cast::<T>() };
     unsafe { std::ptr::drop_in_place(ptr) };
     0
 }

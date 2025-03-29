@@ -41,6 +41,7 @@ unsafe extern "C-unwind" {
     pub fn lua54_getfield(L: *mut lua_State, index: c_int, k: *const c_char) -> Type;
     pub fn engine_setfield(L: *mut lua_State, index: c_int, k: *const c_char);
     pub fn engine_newuserdatauv(L: *mut lua_State, size: usize, nuvalue: c_int) -> *mut u8;
+    pub fn zl_newmetatable(L: *mut lua_State, tname: *const c_char) -> c_int;
     pub fn engine_setmetatable(L: *mut lua_State, index: c_int);
     pub fn zl_getmetafield(L: *mut lua_State, obj: c_int, e: *const c_char) -> Type;
     pub fn engine_upvalueindex(i: c_int) -> c_int;

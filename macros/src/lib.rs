@@ -1,7 +1,17 @@
 use proc_macro::TokenStream;
-use syn::{Error, ItemEnum, parse_macro_input};
+use syn::{Error, ItemEnum, ItemImpl, parse_macro_input};
 
+mod class;
 mod derive;
+
+#[proc_macro_attribute]
+pub fn class(_: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as ItemImpl);
+
+    self::class::transform(item)
+        .unwrap_or_else(Error::into_compile_error)
+        .into()
+}
 
 #[proc_macro_derive(FromOption)]
 pub fn derive_from_option(item: TokenStream) -> TokenStream {

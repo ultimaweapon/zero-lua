@@ -5,7 +5,7 @@ use std::ptr::null_mut;
 
 /// Type of Lua value.
 #[repr(C)]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
     None = -1,
     Nil,

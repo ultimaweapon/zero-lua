@@ -8,6 +8,7 @@ pub use self::string::*;
 pub use self::table::*;
 pub use self::thread::*;
 pub use self::ty::*;
+pub use self::userdata::*;
 pub use zl_macros::*;
 
 use self::ffi::{engine_checkstack, engine_pop, zl_getmetafield};
@@ -26,6 +27,7 @@ mod string;
 mod table;
 mod thread;
 mod ty;
+mod userdata;
 
 extern crate zl_sys; // Required since no Rust code references this crate.
 
