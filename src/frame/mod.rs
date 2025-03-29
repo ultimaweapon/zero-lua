@@ -9,15 +9,15 @@ use crate::{
 use std::any::TypeId;
 use std::ffi::{CStr, c_int};
 use std::mem::ManuallyDrop;
-use std::panic::UnwindSafe;
+use std::panic::RefUnwindSafe;
 use std::path::Path;
 
 /// Frame in a Lua stack.
 ///
 /// Most methods in this trait can raise a C++ exception. When calling outside Lua runtime it will
 /// cause the process to terminate the same as Rust panic. Inside Lua runtime it will report as Lua
-/// error. Usually you don't need to worry about this **unless** you use any type that does not
-/// implement a proper RAII.
+/// error. Usually you don't need to worry about this as long as you can return from a function
+/// without required a manual cleanup.
 pub trait Frame: Sized {
     fn require_os(&mut self) -> Table<Self> {
         // SAFETY: 3 is maximum stack size used by engine_require_os.
@@ -80,7 +80,7 @@ pub trait Frame: Sized {
     /// See [`Context`] for how to return some values to Lua.
     fn push_fn<F>(&mut self, f: F) -> Function<Self>
     where
-        F: Fn(&mut Context) -> Result<(), Error> + UnwindSafe + 'static,
+        F: Fn(&mut Context) -> Result<(), Error> + RefUnwindSafe + 'static,
     {
         // SAFETY: 3 is maximum items we pushed here.
         unsafe { engine_checkstack(self.state(), 3) };
@@ -207,7 +207,7 @@ unsafe fn push_metatable<F: Frame, T: UserData>(f: &mut F) {
 
 unsafe extern "C-unwind" fn invoker<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
 where
-    F: Fn(&mut Context) -> Result<(), Error> + UnwindSafe + 'static,
+    F: Fn(&mut Context) -> Result<(), Error> + RefUnwindSafe + 'static,
 {
     let mut cx = unsafe { Context::new(L) };
     let cb = unsafe { engine_upvalueindex(1) };

@@ -2,11 +2,12 @@ pub use self::value::*;
 
 use crate::{Frame, Table};
 use std::ffi::CStr;
+use std::panic::RefUnwindSafe;
 
 mod value;
 
 /// Strongly typed Lua user data.
-pub trait UserData: 'static {
+pub trait UserData: RefUnwindSafe + 'static {
     fn name() -> &'static CStr;
 
     /// Note that Zero Lua will overwrite the value of `typeid` and `__gc` after this.
