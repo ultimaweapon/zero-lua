@@ -1,7 +1,7 @@
 use crate::ffi::{
     engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop, engine_pushcclosure,
-    engine_pushnil, engine_setfield, engine_setmetatable, engine_touserdata, engine_upvalueindex,
-    lua_State, lua54_getfield, zl_load, zl_newmetatable, zl_pushlstring, zl_require_os,
+    engine_pushnil, engine_setfield, engine_touserdata, engine_upvalueindex, lua_State,
+    lua54_getfield, zl_load, zl_newmetatable, zl_pushlstring, zl_require_os, zl_setmetatable,
 };
 use crate::{
     Context, Error, Function, GlobalSetter, Nil, Str, Table, UserData, UserValue, is_boxed,
@@ -96,7 +96,7 @@ pub trait Frame: Sized {
                 unsafe { engine_createtable(self.state(), 0, 1) };
                 unsafe { engine_pushcclosure(self.state(), finalizer::<F>, 0) };
                 unsafe { engine_setfield(self.state(), -2, c"__gc".as_ptr()) };
-                unsafe { engine_setmetatable(self.state(), -1) };
+                unsafe { zl_setmetatable(self.state(), -2) };
             }
 
             // Push invoker.
@@ -111,7 +111,7 @@ pub trait Frame: Sized {
             unsafe { engine_createtable(self.state(), 0, 1) };
             unsafe { engine_pushcclosure(self.state(), finalizer::<Box<F>>, 0) };
             unsafe { engine_setfield(self.state(), -2, c"__gc".as_ptr()) };
-            unsafe { engine_setmetatable(self.state(), -1) };
+            unsafe { zl_setmetatable(self.state(), -2) };
 
             // Push invoker.
             unsafe { engine_pushcclosure(self.state(), invoker::<Box<F>>, 1) };
@@ -144,7 +144,7 @@ pub trait Frame: Sized {
         }
 
         unsafe { push_metatable::<Self, T>(self) };
-        unsafe { engine_setmetatable(self.state(), -1) };
+        unsafe { zl_setmetatable(self.state(), -2) };
 
         unsafe { UserValue::new(self) }
     }
