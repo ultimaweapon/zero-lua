@@ -1,6 +1,6 @@
 pub use self::ret::*;
 
-use crate::ffi::{engine_checkstack, engine_pcall};
+use crate::ffi::{engine_checkstack, zl_pcall};
 use crate::{Frame, Str};
 
 mod ret;
@@ -25,7 +25,7 @@ impl<'a, P: Frame> Function<'a, P> {
         // Call.
         let p = self.0.take().unwrap();
 
-        match unsafe { engine_pcall(p.state(), 0, R::N, 0) } {
+        match unsafe { zl_pcall(p.state(), 0, R::N, 0) } {
             true => Ok(unsafe { R::new(p) }),
             false => Err(unsafe { Str::new(p) }),
         }

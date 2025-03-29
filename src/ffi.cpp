@@ -66,7 +66,7 @@ extern "C" bool zl_load(lua_State *L, const char *name, const char *chunk, size_
     return luaL_loadbuffer(L, chunk, len, name) == LUA_OK;
 }
 
-extern "C" bool engine_pcall(lua_State *L, int nargs, int nresults, int msgh)
+extern "C" bool zl_pcall(lua_State *L, int nargs, int nresults, int msgh)
 {
     return lua_pcall(L, nargs, nresults, msgh) == LUA_OK;
 }
