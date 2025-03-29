@@ -42,9 +42,9 @@ extern "C" void zl_close(lua_State *L)
     lua_close(L);
 }
 
-extern "C" void zl_require_base(lua_State *L)
+extern "C" void zl_require_base(lua_State *L, bool global)
 {
-    luaL_requiref(L, LUA_GNAME, luaopen_base, 1);
+    luaL_requiref(L, LUA_GNAME, luaopen_base, global);
 }
 
 extern "C" void zl_require_coroutine(lua_State *L, bool global)
@@ -52,9 +52,9 @@ extern "C" void zl_require_coroutine(lua_State *L, bool global)
     luaL_requiref(L, LUA_COLIBNAME, luaopen_coroutine, global);
 }
 
-extern "C" void zl_require_os(lua_State *L)
+extern "C" void zl_require_os(lua_State *L, bool global)
 {
-    luaL_requiref(L, LUA_OSLIBNAME, luaopen_os, 1);
+    luaL_requiref(L, LUA_OSLIBNAME, luaopen_os, global);
 }
 
 extern "C" bool zl_load(lua_State *L, const char *name, const char *chunk, size_t len)

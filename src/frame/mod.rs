@@ -20,10 +20,10 @@ use std::path::Path;
 /// error. Usually you don't need to worry about this as long as you can return from a function
 /// without required a manual cleanup.
 pub trait Frame: Sized {
-    fn require_base(&mut self) -> Table<Self> {
+    fn require_base(&mut self, global: bool) -> Table<Self> {
         // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_base.
         unsafe { engine_checkstack(self.state(), 3) };
-        unsafe { zl_require_base(self.state()) };
+        unsafe { zl_require_base(self.state(), global) };
 
         unsafe { Table::new(self) }
     }
@@ -36,10 +36,10 @@ pub trait Frame: Sized {
         unsafe { Table::new(self) }
     }
 
-    fn require_os(&mut self) -> Table<Self> {
+    fn require_os(&mut self, global: bool) -> Table<Self> {
         // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_os.
         unsafe { engine_checkstack(self.state(), 3) };
-        unsafe { zl_require_os(self.state()) };
+        unsafe { zl_require_os(self.state(), global) };
 
         unsafe { Table::new(self) }
     }
