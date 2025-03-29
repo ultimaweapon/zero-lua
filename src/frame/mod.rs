@@ -1,7 +1,8 @@
 use crate::ffi::{
     engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop, engine_pushcclosure,
     engine_pushnil, engine_setfield, engine_touserdata, engine_upvalueindex, lua_State,
-    lua54_getfield, zl_load, zl_newmetatable, zl_pushlstring, zl_require_os, zl_setmetatable,
+    lua54_getfield, zl_load, zl_newmetatable, zl_pushlstring, zl_require_base, zl_require_os,
+    zl_setmetatable,
 };
 use crate::{
     Context, Error, Function, GlobalSetter, Nil, Str, Table, UserData, UserValue, is_boxed,
@@ -19,8 +20,16 @@ use std::path::Path;
 /// error. Usually you don't need to worry about this as long as you can return from a function
 /// without required a manual cleanup.
 pub trait Frame: Sized {
+    fn require_base(&mut self) -> Table<Self> {
+        // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_base.
+        unsafe { engine_checkstack(self.state(), 3) };
+        unsafe { zl_require_base(self.state()) };
+
+        unsafe { Table::new(self) }
+    }
+
     fn require_os(&mut self) -> Table<Self> {
-        // SAFETY: 3 is maximum stack size used by engine_require_os.
+        // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_os.
         unsafe { engine_checkstack(self.state(), 3) };
         unsafe { zl_require_os(self.state()) };
 

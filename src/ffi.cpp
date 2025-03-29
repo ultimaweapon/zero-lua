@@ -22,7 +22,6 @@ extern "C" lua_State *lua54_newstate()
 
     // Register libraries that does not need to alter its behavior.
     auto libs = {
-        std::make_pair(LUA_GNAME, luaopen_base),
         std::make_pair(LUA_COLIBNAME, luaopen_coroutine),
         std::make_pair(LUA_TABLIBNAME, luaopen_table),
         std::make_pair(LUA_IOLIBNAME, luaopen_io),
@@ -42,6 +41,11 @@ extern "C" lua_State *lua54_newstate()
 extern "C" void zl_close(lua_State *L)
 {
     lua_close(L);
+}
+
+extern "C" void zl_require_base(lua_State *L)
+{
+    luaL_requiref(L, LUA_GNAME, luaopen_base, 1);
 }
 
 extern "C" void zl_require_os(lua_State *L)
