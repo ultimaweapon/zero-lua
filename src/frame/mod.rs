@@ -1,8 +1,9 @@
+use self::userdata::push_metatable;
 use crate::ffi::{
     engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop, engine_pushcclosure,
-    engine_pushnil, engine_setfield, engine_touserdata, engine_upvalueindex, lua_State,
-    lua54_getfield, zl_load, zl_newmetatable, zl_pushlstring, zl_require_base,
-    zl_require_coroutine, zl_require_io, zl_require_os, zl_setmetatable,
+    engine_pushnil, engine_setfield, engine_touserdata, engine_upvalueindex, lua_State, zl_load,
+    zl_newmetatable, zl_pushlstring, zl_require_base, zl_require_coroutine, zl_require_io,
+    zl_require_os, zl_setmetatable,
 };
 use crate::{
     Context, Error, Function, GlobalSetter, Nil, Str, Table, UserData, UserValue, is_boxed,
@@ -13,13 +14,51 @@ use std::mem::ManuallyDrop;
 use std::panic::RefUnwindSafe;
 use std::path::Path;
 
-/// Frame in a Lua stack.
+mod userdata;
+
+/// Virtual frame in a Lua stack.
 ///
 /// Most methods in this trait can raise a C++ exception. When calling outside Lua runtime it will
 /// cause the process to terminate the same as Rust panic. Inside Lua runtime it will report as Lua
 /// error. Usually you don't need to worry about this as long as you can return from a function
 /// without required a manual cleanup.
 pub trait Frame: Sized {
+    /// Returns `true` if `T` was successfully registered or `false` if the other user data with the
+    /// same name already registered.
+    fn register_ud<T: UserData>(&mut self) -> bool {
+        // SAFETY: 2 is the maximum values we pushed here.
+        unsafe { engine_checkstack(self.state(), 2) };
+
+        // Check if exists.
+        let ok = if unsafe { zl_newmetatable(self.state(), T::name().as_ptr()) != 0 } {
+            // Setup metatable.
+            T::setup_metatable(&mut ManuallyDrop::new(unsafe { Table::new(self) }));
+
+            // Set "typeid".
+            let ud = unsafe { engine_newuserdatauv(self.state(), size_of::<TypeId>(), 0) };
+
+            unsafe { ud.cast::<TypeId>().write_unaligned(TypeId::of::<T>()) };
+            unsafe { engine_setfield(self.state(), -2, c"typeid".as_ptr()) };
+
+            // Set finalizer.
+            if is_boxed::<T>() {
+                unsafe { engine_pushcclosure(self.state(), finalizer::<Box<T>>, 0) };
+                unsafe { engine_setfield(self.state(), -2, c"__gc".as_ptr()) };
+            } else if std::mem::needs_drop::<T>() {
+                unsafe { engine_pushcclosure(self.state(), finalizer::<T>, 0) };
+                unsafe { engine_setfield(self.state(), -2, c"__gc".as_ptr()) };
+            }
+
+            true
+        } else {
+            false
+        };
+
+        unsafe { engine_pop(self.state(), 1) };
+
+        ok
+    }
+
     fn require_base(&mut self, global: bool) -> Table<Self> {
         // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_base.
         unsafe { engine_checkstack(self.state(), 3) };
@@ -155,7 +194,7 @@ pub trait Frame: Sized {
     }
 
     /// # Panics
-    /// If [`UserData::name()`] on `T` is duplicated with the other type.
+    /// If `T` was not registered with [`Frame::register_ud()`].
     fn push_ud<T: UserData>(&mut self, v: T) -> UserValue<Self> {
         // SAFETY: Maximum pushed from luaL_newmetatable is 2.
         unsafe { engine_checkstack(self.state(), 3) };
@@ -170,7 +209,7 @@ pub trait Frame: Sized {
             unsafe { ptr.cast::<T>().write(v) };
         }
 
-        unsafe { push_metatable::<Self, T>(self) };
+        unsafe { push_metatable::<T>(self.state()) };
         unsafe { zl_setmetatable(self.state(), -2) };
 
         unsafe { UserValue::new(self) }
@@ -187,49 +226,6 @@ pub trait Frame: Sized {
     /// `n` must be greater than zero and `n` values on the top of stack must be owned by the
     /// caller.
     unsafe fn release_values(&mut self, n: c_int);
-}
-
-#[inline(never)]
-unsafe fn push_metatable<F: Frame, T: UserData>(f: &mut F) {
-    // Check if exists.
-    let id = TypeId::of::<T>();
-
-    if unsafe { zl_newmetatable(f.state(), T::name().as_ptr()) == 0 } {
-        // SAFETY: Checking field type does not really give us 100% safe. The only cases
-        // "typeid" is not our value are either:
-        //
-        // 1. Our user use lua_State wrong.
-        // 2. We screw ourself.
-        //
-        // The first case required unsafe code and the second case is our own bug.
-        unsafe { lua54_getfield(f.state(), -1, c"typeid".as_ptr()) };
-
-        // SAFETY: TypeId is Copy.
-        let ud = unsafe { engine_touserdata(f.state(), -1) };
-
-        assert_eq!(unsafe { ud.cast::<TypeId>().read_unaligned() }, id);
-
-        unsafe { engine_pop(f.state(), 1) };
-        return;
-    }
-
-    // Setup metatable.
-    T::setup_metatable(&mut ManuallyDrop::new(unsafe { Table::new(f) }));
-
-    // Set "typeid".
-    let ud = unsafe { engine_newuserdatauv(f.state(), size_of::<TypeId>(), 0) };
-
-    unsafe { ud.cast::<TypeId>().write_unaligned(id) };
-    unsafe { engine_setfield(f.state(), -2, c"typeid".as_ptr()) };
-
-    // Set finalizer.
-    if is_boxed::<T>() {
-        unsafe { engine_pushcclosure(f.state(), finalizer::<Box<T>>, 0) };
-        unsafe { engine_setfield(f.state(), -2, c"__gc".as_ptr()) };
-    } else if std::mem::needs_drop::<T>() {
-        unsafe { engine_pushcclosure(f.state(), finalizer::<T>, 0) };
-        unsafe { engine_setfield(f.state(), -2, c"__gc".as_ptr()) };
-    }
 }
 
 unsafe extern "C-unwind" fn invoker<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
