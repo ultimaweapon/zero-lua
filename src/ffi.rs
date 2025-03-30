@@ -42,6 +42,7 @@ unsafe extern "C-unwind" {
     pub fn lua54_typename(L: *mut lua_State, tp: Type) -> *const c_char;
     pub fn engine_createtable(L: *mut lua_State, narr: c_int, nrec: c_int);
     pub fn zl_ref(L: *mut lua_State, t: c_int) -> c_int;
+    pub fn zl_unref(L: *mut lua_State, t: c_int, r#ref: c_int);
     pub fn lua54_geti(L: *mut lua_State, index: c_int, i: i64) -> Type;
     pub fn lua54_seti(L: *mut lua_State, index: c_int, n: i64);
     pub fn lua54_getfield(L: *mut lua_State, index: c_int, k: *const c_char) -> Type;
@@ -57,4 +58,6 @@ unsafe extern "C-unwind" {
     pub fn lua54_replace(L: *mut lua_State, index: c_int);
     pub fn engine_pop(L: *mut lua_State, n: c_int);
     pub fn engine_error(L: *mut lua_State, msg: *const c_char) -> !;
+    pub fn zl_getextraspace(L: *mut lua_State) -> *mut u8;
+    pub fn zl_newthread(L: *mut lua_State) -> *mut lua_State;
 }

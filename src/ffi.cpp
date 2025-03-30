@@ -7,9 +7,11 @@
 #include <utility>
 
 #include <stdint.h>
+#include <string.h>
 
 static_assert(sizeof(lua_Integer) == sizeof(int64_t));
 static_assert(std::is_signed<lua_Integer>::value);
+static_assert(LUA_EXTRASPACE == sizeof(void *));
 
 extern "C" int ZL_REGISTRYINDEX = LUA_REGISTRYINDEX;
 
@@ -21,6 +23,10 @@ extern "C" lua_State *lua54_newstate()
     if (!L) {
         throw std::bad_alloc();
     }
+
+    // Lua does not mention about the initial content of extra space and it seems like Lua does not
+    // zeroed this area.
+    memset(lua_getextraspace(L), 0, LUA_EXTRASPACE);
 
     // Register libraries that does not need to alter its behavior.
     auto libs = {
@@ -158,6 +164,11 @@ extern "C" int zl_ref(lua_State *L, int t)
     return luaL_ref(L, t);
 }
 
+extern "C" void zl_unref(lua_State *L, int t, int ref)
+{
+    luaL_unref(L, t, ref);
+}
+
 extern "C" int lua54_geti(lua_State *L, int index, int64_t i)
 {
     return lua_geti(L, index, i);
@@ -231,4 +242,14 @@ extern "C" void engine_pop(lua_State *L, int n)
 extern "C" int engine_error(lua_State *L, const char *msg)
 {
     return luaL_error(L, "%s", msg);
+}
+
+extern "C" void *zl_getextraspace(lua_State *L)
+{
+    return lua_getextraspace(L);
+}
+
+extern "C" lua_State *zl_newthread(lua_State *L)
+{
+    return lua_newthread(L);
 }
