@@ -10,6 +10,8 @@ mod value;
 pub trait UserData: RefUnwindSafe + 'static {
     fn name() -> &'static CStr;
 
+    /// Setup a metatable for the type. This is your only chance to access type's metatable.
+    ///
     /// Note that Zero Lua will overwrite the value of `typeid` and `__gc` after this.
     fn setup_metatable<P: Frame>(t: &mut Table<P>) {
         let _ = t;

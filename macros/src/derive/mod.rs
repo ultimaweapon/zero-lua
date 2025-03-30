@@ -1,6 +1,33 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{Error, Fields, ItemEnum, LitByteStr};
+use syn::{Error, Fields, Item, ItemEnum, LitByteStr};
+
+pub fn user_data(item: Item) -> syn::Result<TokenStream> {
+    // Get type identifier.
+    let ident = match item {
+        Item::Struct(v) => {
+            if v.generics.lt_token.is_some() {
+                return Err(Error::new_spanned(
+                    v.ident,
+                    "generic struct is not supported",
+                ));
+            }
+
+            v.ident
+        }
+        v => return Err(Error::new_spanned(v, "unsupported item")),
+    };
+
+    // Compose.
+    Ok(quote! {
+        impl ::zl::UserData for #ident {
+            fn name() -> &'static ::core::ffi::CStr {
+                static NAME: ::std::sync::LazyLock<::std::ffi::CString> = ::std::sync::LazyLock::new(|| ::std::ffi::CString::new(::std::any::type_name::<#ident>()).unwrap());
+                NAME.as_c_str()
+            }
+        }
+    })
+}
 
 pub fn from_option(item: ItemEnum) -> syn::Result<TokenStream> {
     // Parse variants.
