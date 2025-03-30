@@ -23,7 +23,7 @@ impl<'a, P: Frame> Table<'a, P> {
     /// Calling this method without pushing a value to [`TableFrame`] does nothing.
     ///
     /// Note that the returned [`TableFrame`] only keep the last pushed value.
-    pub fn set<K: TableKey>(&mut self, key: K) -> TableFrame<Self, K> {
+    pub fn set<K: TableSetter>(&mut self, key: K) -> TableFrame<Self, K> {
         unsafe { TableFrame::new(self, key) }
     }
 }

@@ -1,4 +1,4 @@
-use super::{Table, TableKey};
+use super::{Table, TableGetter};
 use crate::ffi::{engine_checkstack, engine_pop, lua_State};
 use crate::{Frame, Function, Nil, Str, Type, Value};
 use std::ffi::c_int;
@@ -18,7 +18,7 @@ impl<'a, P: Frame> BorrowedTable<'a, P> {
         Self { parent, index }
     }
 
-    pub fn get<K: TableKey>(&mut self, key: K) -> Value<Self> {
+    pub fn get<K: TableGetter>(&mut self, key: K) -> Value<Self> {
         unsafe { engine_checkstack(self.state(), 1) };
 
         match unsafe { key.get_value(self.parent.state(), self.index) } {

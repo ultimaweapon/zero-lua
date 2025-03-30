@@ -1,4 +1,4 @@
-use super::TableKey;
+use super::TableSetter;
 use crate::Frame;
 use crate::ffi::{engine_pop, lua_State, lua54_replace};
 use std::ffi::c_int;
@@ -10,7 +10,7 @@ use std::ffi::c_int;
 pub struct TableFrame<'a, P, K>
 where
     P: Frame,
-    K: TableKey,
+    K: TableSetter,
 {
     parent: &'a mut P,
     key: K,
@@ -20,7 +20,7 @@ where
 impl<'a, P, K> TableFrame<'a, P, K>
 where
     P: Frame,
-    K: TableKey,
+    K: TableSetter,
 {
     /// # Safety
     /// Top of the stack must be a table.
@@ -37,7 +37,7 @@ where
 impl<'a, P, K> Drop for TableFrame<'a, P, K>
 where
     P: Frame,
-    K: TableKey,
+    K: TableSetter,
 {
     #[inline(always)]
     fn drop(&mut self) {
@@ -50,7 +50,7 @@ where
 impl<'a, P, K> Frame for TableFrame<'a, P, K>
 where
     P: Frame,
-    K: TableKey,
+    K: TableSetter,
 {
     #[inline(always)]
     fn state(&self) -> *mut lua_State {

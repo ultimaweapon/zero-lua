@@ -21,6 +21,7 @@ where
     P: Frame,
     N: AsRef<CStr>,
 {
+    #[inline(always)]
     pub(crate) fn new(parent: &'a mut P, name: N) -> Self {
         Self {
             parent,
@@ -35,6 +36,7 @@ where
     P: Frame,
     N: AsRef<CStr>,
 {
+    #[inline(always)]
     fn drop(&mut self) {
         if self.has_value {
             unsafe { lua54_setglobal(self.state(), self.name.as_ref().as_ptr()) };
@@ -47,10 +49,12 @@ where
     P: Frame,
     N: AsRef<CStr>,
 {
+    #[inline(always)]
     fn state(&self) -> *mut lua_State {
         self.parent.state()
     }
 
+    #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
         // All checks here should be optimized away in most cases since this method and new() should
         // be automatically inlined.
