@@ -1,14 +1,14 @@
 pub use self::borrowed::*;
+pub use self::frame::*;
 pub use self::key::*;
-pub use self::setter::*;
 
 use crate::Frame;
 use crate::ffi::{engine_pop, lua_State};
 use std::ffi::c_int;
 
 mod borrowed;
+mod frame;
 mod key;
-mod setter;
 
 /// Encapsulates an owned table in the stack.
 pub struct Table<'a, P: Frame>(&'a mut P);
@@ -20,11 +20,11 @@ impl<'a, P: Frame> Table<'a, P> {
         Self(p)
     }
 
-    /// Calling this method without pushing a value to [`TableSetter`] does nothing.
+    /// Calling this method without pushing a value to [`TableFrame`] does nothing.
     ///
-    /// Note that the returned [`TableSetter`] only keep the last pushed value.
-    pub fn set<K: TableKey>(&mut self, key: K) -> TableSetter<Self, K> {
-        unsafe { TableSetter::new(self, key) }
+    /// Note that the returned [`TableFrame`] only keep the last pushed value.
+    pub fn set<K: TableKey>(&mut self, key: K) -> TableFrame<Self, K> {
+        unsafe { TableFrame::new(self, key) }
     }
 }
 

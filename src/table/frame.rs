@@ -7,7 +7,7 @@ use std::ffi::c_int;
 ///
 /// Only the first value is used if you push a multiple values (the rest will be discarded) and only
 /// the value from the recent push will be used.
-pub struct TableSetter<'a, P, K>
+pub struct TableFrame<'a, P, K>
 where
     P: Frame,
     K: TableKey,
@@ -17,7 +17,7 @@ where
     has_value: bool,
 }
 
-impl<'a, P, K> TableSetter<'a, P, K>
+impl<'a, P, K> TableFrame<'a, P, K>
 where
     P: Frame,
     K: TableKey,
@@ -34,7 +34,7 @@ where
     }
 }
 
-impl<'a, P, K> Drop for TableSetter<'a, P, K>
+impl<'a, P, K> Drop for TableFrame<'a, P, K>
 where
     P: Frame,
     K: TableKey,
@@ -47,7 +47,7 @@ where
     }
 }
 
-impl<'a, P, K> Frame for TableSetter<'a, P, K>
+impl<'a, P, K> Frame for TableFrame<'a, P, K>
 where
     P: Frame,
     K: TableKey,
@@ -59,8 +59,8 @@ where
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        // All checks here should be optimized away in most cases since this method and new() should
-        // be automatically inlined.
+        // All checks here should be optimized away in most cases since this method and new() forced
+        // inline.
         let excess = n - 1;
 
         if excess > 0 {
