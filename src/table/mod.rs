@@ -24,7 +24,7 @@ impl<'a, P: Frame> Table<'a, P> {
     ///
     /// Note that the returned [`TableFrame`] only keep the last pushed value.
     pub fn set<K: TableSetter>(&mut self, key: K) -> TableFrame<Self, K> {
-        unsafe { TableFrame::new(self, key) }
+        unsafe { TableFrame::new(self, -2, key) }
     }
 }
 

@@ -1,12 +1,13 @@
 use self::userdata::push_metatable;
 use crate::ffi::{
-    engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop, engine_pushcclosure,
-    engine_pushnil, engine_setfield, engine_touserdata, engine_upvalueindex, lua_State, zl_load,
-    zl_newmetatable, zl_pushlstring, zl_require_base, zl_require_coroutine, zl_require_io,
-    zl_require_os, zl_setmetatable,
+    ZL_REGISTRYINDEX, engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop,
+    engine_pushcclosure, engine_pushnil, engine_setfield, engine_touserdata, engine_upvalueindex,
+    lua_State, zl_load, zl_newmetatable, zl_pushlstring, zl_require_base, zl_require_coroutine,
+    zl_require_io, zl_require_os, zl_setmetatable,
 };
 use crate::{
-    Context, Error, Function, GlobalSetter, Nil, Str, Table, UserData, UserValue, is_boxed,
+    Context, Error, Function, GlobalSetter, Nil, Str, Table, TableFrame, TableGetter, TableSetter,
+    UserData, UserValue, Value, is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::{CStr, c_int};
@@ -89,6 +90,14 @@ pub trait Frame: Sized {
         unsafe { zl_require_os(self.state(), global) };
 
         unsafe { Table::new(self) }
+    }
+
+    fn set_registry<K: TableSetter>(&mut self, k: K) -> TableFrame<Self, K> {
+        unsafe { TableFrame::new(self, ZL_REGISTRYINDEX, k) }
+    }
+
+    fn get_registry<K: TableGetter>(&mut self, k: K) -> Value<Self> {
+        unsafe { Value::from_table(self, ZL_REGISTRYINDEX, k) }
     }
 
     fn set_global<N: AsRef<CStr>>(&mut self, name: N) -> GlobalSetter<Self, N> {

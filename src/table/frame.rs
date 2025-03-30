@@ -13,6 +13,7 @@ where
     K: TableSetter,
 {
     parent: &'a mut P,
+    table: c_int,
     key: K,
     has_value: bool,
 }
@@ -23,11 +24,12 @@ where
     K: TableSetter,
 {
     /// # Safety
-    /// Top of the stack must be a table.
+    /// `table` must be a valid index of the table when this struct is dropped with the value.
     #[inline(always)]
-    pub(crate) unsafe fn new(parent: &'a mut P, key: K) -> Self {
+    pub(crate) unsafe fn new(parent: &'a mut P, table: c_int, key: K) -> Self {
         Self {
             parent,
+            table,
             key,
             has_value: false,
         }
@@ -42,7 +44,7 @@ where
     #[inline(always)]
     fn drop(&mut self) {
         if self.has_value {
-            unsafe { self.key.set_value(self.parent.state(), -2) };
+            unsafe { self.key.set_value(self.parent.state(), self.table) };
         }
     }
 }

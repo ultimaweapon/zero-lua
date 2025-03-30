@@ -6,6 +6,8 @@ use std::ffi::{c_char, c_int};
 pub struct lua_State([u8; 0]);
 
 unsafe extern "C-unwind" {
+    pub static ZL_REGISTRYINDEX: c_int;
+
     pub safe fn lua54_newstate() -> *mut lua_State;
     pub fn zl_close(L: *mut lua_State);
     pub fn zl_require_base(L: *mut lua_State, global: bool);
@@ -39,6 +41,7 @@ unsafe extern "C-unwind" {
     pub fn lua54_type(L: *mut lua_State, index: c_int) -> Type;
     pub fn lua54_typename(L: *mut lua_State, tp: Type) -> *const c_char;
     pub fn engine_createtable(L: *mut lua_State, narr: c_int, nrec: c_int);
+    pub fn zl_ref(L: *mut lua_State, t: c_int) -> c_int;
     pub fn lua54_geti(L: *mut lua_State, index: c_int, i: i64) -> Type;
     pub fn lua54_seti(L: *mut lua_State, index: c_int, n: i64);
     pub fn lua54_getfield(L: *mut lua_State, index: c_int, k: *const c_char) -> Type;

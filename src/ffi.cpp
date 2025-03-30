@@ -11,6 +11,8 @@
 static_assert(sizeof(lua_Integer) == sizeof(int64_t));
 static_assert(std::is_signed<lua_Integer>::value);
 
+extern "C" int ZL_REGISTRYINDEX = LUA_REGISTRYINDEX;
+
 extern "C" lua_State *lua54_newstate()
 {
     // Create Lua state.
@@ -149,6 +151,11 @@ extern "C" const char *lua54_typename(lua_State *L, int tp)
 extern "C" void engine_createtable(lua_State *L, int narr, int nrec)
 {
     lua_createtable(L, narr, nrec);
+}
+
+extern "C" int zl_ref(lua_State *L, int t)
+{
+    return luaL_ref(L, t);
 }
 
 extern "C" int lua54_geti(lua_State *L, int index, int64_t i)
