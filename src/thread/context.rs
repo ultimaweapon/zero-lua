@@ -1,6 +1,6 @@
 use crate::ffi::{
-    engine_argerror, engine_error, engine_gettop, engine_isnil, engine_pop, engine_touserdata,
-    lua_State, lua54_getfield, lua54_istable, lua54_typeerror, zl_checklstring, zl_getmetatable,
+    engine_argerror, engine_gettop, engine_isnil, engine_pop, engine_touserdata, lua_State,
+    lua54_getfield, lua54_istable, lua54_typeerror, zl_checklstring, zl_error, zl_getmetatable,
     zl_tolstring,
 };
 use crate::{BorrowedTable, Error, ErrorKind, Frame, UserData, is_boxed};
@@ -193,7 +193,7 @@ impl<'a> Context<'a> {
             // SAFETY: n only used to format the message.
             ErrorKind::Arg(n, e) => unsafe { engine_argerror(self.state, n, e.as_ptr().cast()) },
             ErrorKind::ArgType(n, e) => (n, e),
-            ErrorKind::Other(e) => unsafe { engine_error(self.state, e.as_ptr().cast()) },
+            ErrorKind::Other(e) => unsafe { zl_error(self.state, e.as_ptr().cast()) },
         };
 
         if n <= self.args {

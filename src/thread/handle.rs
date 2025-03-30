@@ -1,5 +1,6 @@
 use super::Lua;
-use crate::ffi::{ZL_REGISTRYINDEX, lua_State, zl_getextraspace, zl_ref, zl_unref};
+use crate::Frame;
+use crate::ffi::{ZL_REGISTRYINDEX, engine_pop, lua_State, zl_getextraspace, zl_ref, zl_unref};
 use std::ffi::c_int;
 use std::rc::Rc;
 
@@ -31,5 +32,17 @@ impl Drop for ThreadHandle {
         // Decrease main thread references. This must be done as the last thing here since it can
         // free the main thread.
         unsafe { Rc::decrement_strong_count(val) };
+    }
+}
+
+impl Frame for ThreadHandle {
+    #[inline(always)]
+    fn state(&self) -> *mut lua_State {
+        self.state
+    }
+
+    #[inline(always)]
+    unsafe fn release_values(&mut self, n: c_int) {
+        unsafe { engine_pop(self.state, n) };
     }
 }

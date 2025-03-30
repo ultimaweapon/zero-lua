@@ -239,7 +239,7 @@ extern "C" void engine_pop(lua_State *L, int n)
     lua_pop(L, n);
 }
 
-extern "C" int engine_error(lua_State *L, const char *msg)
+extern "C" int zl_error(lua_State *L, const char *msg)
 {
     return luaL_error(L, "%s", msg);
 }

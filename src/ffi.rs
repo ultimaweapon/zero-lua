@@ -57,7 +57,7 @@ unsafe extern "C-unwind" {
     pub fn lua54_setglobal(L: *mut lua_State, name: *const c_char);
     pub fn lua54_replace(L: *mut lua_State, index: c_int);
     pub fn engine_pop(L: *mut lua_State, n: c_int);
-    pub fn engine_error(L: *mut lua_State, msg: *const c_char) -> !;
+    pub fn zl_error(L: *mut lua_State, msg: *const c_char) -> !;
     pub fn zl_getextraspace(L: *mut lua_State) -> *mut u8;
     pub fn zl_newthread(L: *mut lua_State) -> *mut lua_State;
 }
