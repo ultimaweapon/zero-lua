@@ -21,6 +21,7 @@ impl<'a, const N: u16, P: Frame> FixedRet<'a, N, P> {
     ///
     /// # Panics
     /// If `n` is geater than `N`.
+    #[inline(always)]
     pub fn to_nil(&self, n: NonZero<u16>) -> Option<()> {
         unsafe { engine_isnil(self.0.state(), Self::index(n)).then_some(()) }
     }
@@ -29,6 +30,7 @@ impl<'a, const N: u16, P: Frame> FixedRet<'a, N, P> {
     ///
     /// # Panics
     /// If `n` is geater than `N`.
+    #[inline(always)]
     pub fn to_int(&self, n: NonZero<u16>) -> Option<i64> {
         let mut ok = 0;
         let val = unsafe { engine_tointegerx(self.0.state(), Self::index(n), &mut ok) };
@@ -40,16 +42,19 @@ impl<'a, const N: u16, P: Frame> FixedRet<'a, N, P> {
     ///
     /// # Panics
     /// If `n` is geater than `N`.
+    #[inline(always)]
     pub fn to_type(&self, n: NonZero<u16>) -> Type {
         unsafe { lua54_type(self.0.state(), Self::index(n)) }
     }
 
+    #[inline(always)]
     fn index(n: NonZero<u16>) -> c_int {
         -(c_int::from(N.checked_sub(n.get()).unwrap()) + 1)
     }
 }
 
 impl<'a, const N: u16, P: Frame> Drop for FixedRet<'a, N, P> {
+    #[inline(always)]
     fn drop(&mut self) {
         if N > 0 {
             // SAFETY: This is safe because the requirement of FuncRet::new().
@@ -61,6 +66,7 @@ impl<'a, const N: u16, P: Frame> Drop for FixedRet<'a, N, P> {
 unsafe impl<'a, const N: u16, P: Frame> FuncRet<'a, P> for FixedRet<'a, N, P> {
     const N: c_int = N as c_int;
 
+    #[inline(always)]
     unsafe fn new(p: &'a mut P) -> Self {
         Self(p)
     }

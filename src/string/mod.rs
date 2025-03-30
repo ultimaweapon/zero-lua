@@ -10,6 +10,7 @@ pub struct Str<'a, P: Frame>(&'a mut P);
 impl<'a, P: Frame> Str<'a, P> {
     /// # Safety
     /// Top of the stack must be a string.
+    #[inline(always)]
     pub(crate) unsafe fn new(p: &'a mut P) -> Self {
         Self(p)
     }
@@ -18,6 +19,7 @@ impl<'a, P: Frame> Str<'a, P> {
     /// guarantee there is a NUL past the end.
     ///
     /// Note that the slice may contains NUL.
+    #[inline(always)]
     pub fn to_bytes(&self) -> &[u8] {
         let mut len = 0;
         let ptr = unsafe { zl_tolstring(self.0.state(), -1, &mut len) };
@@ -31,17 +33,20 @@ impl<'a, P: Frame> Str<'a, P> {
         T::from_option(v).ok_or_else(|| OptionError::new(v))
     }
 
+    #[inline(always)]
     pub fn to_c_str(&self) -> &CStr {
         unsafe { CStr::from_ptr(zl_tolstring(self.0.state(), -1, null_mut())) }
     }
 
     /// Invoke [`std::str::from_utf8()`] with the result of [`Self::to_bytes()`].
+    #[inline(always)]
     pub fn to_str(&self) -> Result<&str, Utf8Error> {
         std::str::from_utf8(self.to_bytes())
     }
 }
 
 impl<'a, P: Frame> Drop for Str<'a, P> {
+    #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.0.release_values(1) };
     }

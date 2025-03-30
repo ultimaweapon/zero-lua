@@ -20,6 +20,7 @@ pub enum Type {
 }
 
 impl Type {
+    #[inline(always)]
     pub fn name(self) -> &'static CStr {
         // SAFETY: Lua does not use L.
         unsafe { CStr::from_ptr(lua54_typename(null_mut(), self)) }
@@ -33,6 +34,7 @@ impl Display for Type {
 }
 
 impl From<Type> for &'static str {
+    #[inline(always)]
     fn from(value: Type) -> Self {
         // SAFETY: All type name returned from lua54_typename are UTF-8 and has static storage.
         unsafe { std::str::from_utf8_unchecked(value.name().to_bytes()) }
