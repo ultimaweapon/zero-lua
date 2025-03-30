@@ -19,6 +19,7 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
+    #[inline(always)]
     pub(crate) unsafe fn new(state: *mut lua_State) -> Self {
         let args = unsafe { engine_gettop(state) };
 

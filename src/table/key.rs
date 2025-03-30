@@ -11,10 +11,12 @@ pub trait TableKey {
 }
 
 impl TableKey for i64 {
+    #[inline(always)]
     unsafe fn get_value(&self, state: *mut lua_State, table: c_int) -> Type {
         unsafe { lua54_geti(state, table, *self) }
     }
 
+    #[inline(always)]
     unsafe fn set_value(&self, state: *mut lua_State, table: c_int) {
         unsafe { lua54_seti(state, table, *self) };
     }
@@ -25,10 +27,12 @@ impl TableKey for i64 {
 }
 
 impl TableKey for &CStr {
+    #[inline(always)]
     unsafe fn get_value(&self, state: *mut lua_State, table: c_int) -> Type {
         unsafe { lua54_getfield(state, table, self.as_ptr()) }
     }
 
+    #[inline(always)]
     unsafe fn set_value(&self, state: *mut lua_State, table: c_int) {
         unsafe { engine_setfield(state, table, self.as_ptr()) };
     }

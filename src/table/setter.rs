@@ -24,6 +24,7 @@ where
 {
     /// # Safety
     /// Top of the stack must be a table.
+    #[inline(always)]
     pub(crate) unsafe fn new(parent: &'a mut P, key: K) -> Self {
         Self {
             parent,
@@ -38,6 +39,7 @@ where
     P: Frame,
     K: TableKey,
 {
+    #[inline(always)]
     fn drop(&mut self) {
         if self.has_value {
             unsafe { self.key.set_value(self.parent.state(), -2) };
@@ -50,10 +52,12 @@ where
     P: Frame,
     K: TableKey,
 {
+    #[inline(always)]
     fn state(&self) -> *mut lua_State {
         self.parent.state()
     }
 
+    #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
         // All checks here should be optimized away in most cases since this method and new() should
         // be automatically inlined.
