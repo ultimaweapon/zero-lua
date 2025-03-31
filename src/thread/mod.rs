@@ -1,64 +1,46 @@
+pub use self::r#async::*;
 pub use self::context::*;
 pub use self::handle::*;
 
 use crate::Frame;
-use crate::ffi::{engine_pop, lua_State, lua54_newstate, zl_close, zl_getextraspace, zl_newthread};
+use crate::ffi::{engine_pop, lua_State, lua54_newstate, zl_close};
 use std::ffi::c_int;
-use std::marker::PhantomPinned;
 use std::pin::Pin;
 use std::rc::Rc;
 
+mod r#async;
 mod context;
 mod handle;
 
 /// Encapsulates a `lua_State` created by `lua_newstate`.
-pub struct Lua {
-    state: *mut lua_State,
-    _phantom: PhantomPinned,
-}
+pub struct Lua(*mut lua_State);
 
 impl Lua {
     #[inline(always)]
     pub fn new() -> Self {
-        Self {
-            state: lua54_newstate(),
-            _phantom: PhantomPinned,
-        }
+        Self(lua54_newstate())
     }
 
-    pub fn spawn(self: &Pin<Rc<Self>>) -> ThreadHandle {
-        // Increase main thread references.
-        let ptr = unsafe { zl_getextraspace(self.state).cast::<*const Self>() };
-        let val = unsafe { ptr.read() };
-
-        if val.is_null() {
-            unsafe { ptr.write(Rc::into_raw(Pin::into_inner_unchecked(self.clone()))) };
-        } else {
-            unsafe { Rc::increment_strong_count(val) };
-        }
-
-        // Create thread.
-        let td = unsafe { zl_newthread(self.state) };
-
-        unsafe { ThreadHandle::new(td, self.state) }
+    pub fn into_async(self) -> Pin<Rc<AsyncLua>> {
+        AsyncLua::new(self)
     }
 }
 
 impl Drop for Lua {
     #[inline(always)]
     fn drop(&mut self) {
-        unsafe { zl_close(self.state) };
+        unsafe { zl_close(self.0) };
     }
 }
 
 impl Frame for Lua {
     #[inline(always)]
     fn state(&self) -> *mut lua_State {
-        self.state
+        self.0
     }
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { engine_pop(self.state, n) };
+        unsafe { engine_pop(self.0, n) };
     }
 }
