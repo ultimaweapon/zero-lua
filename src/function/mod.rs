@@ -5,7 +5,7 @@ use crate::{Frame, Str};
 
 mod ret;
 
-/// Encapsulates a callable object in a frame.
+/// Encapsulates a callable object on the top of Lua stack.
 pub struct Function<'a, P: Frame>(Option<&'a mut P>);
 
 impl<'a, P: Frame> Function<'a, P> {

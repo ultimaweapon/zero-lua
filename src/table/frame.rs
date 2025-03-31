@@ -1,6 +1,6 @@
 use super::TableSetter;
-use crate::Frame;
 use crate::ffi::{engine_pop, lua_State, lua54_replace};
+use crate::{Frame, FrameState};
 use std::ffi::c_int;
 
 /// Provides [`Frame`] implementation to set a table value.
@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<'a, P, K> Frame for TableFrame<'a, P, K>
+impl<'a, P, K> FrameState for TableFrame<'a, P, K>
 where
     P: Frame,
     K: TableSetter,

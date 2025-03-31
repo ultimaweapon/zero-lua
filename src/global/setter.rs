@@ -1,5 +1,5 @@
-use crate::Frame;
 use crate::ffi::{engine_pop, lua_State, lua54_replace, lua54_setglobal};
+use crate::{Frame, FrameState};
 use std::ffi::{CStr, c_int};
 
 /// Provides [`Frame`] implementation to set a global value.
@@ -44,7 +44,7 @@ where
     }
 }
 
-impl<'a, P, N> Frame for GlobalSetter<'a, P, N>
+impl<'a, P, N> FrameState for GlobalSetter<'a, P, N>
 where
     P: Frame,
     N: AsRef<CStr>,

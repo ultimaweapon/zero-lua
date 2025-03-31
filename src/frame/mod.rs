@@ -1,3 +1,5 @@
+pub(crate) use self::state::*;
+
 use self::userdata::push_metatable;
 use crate::ffi::{
     ZL_REGISTRYINDEX, engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop,
@@ -15,6 +17,7 @@ use std::mem::ManuallyDrop;
 use std::panic::RefUnwindSafe;
 use std::path::Path;
 
+mod state;
 mod userdata;
 
 /// Virtual frame in a Lua stack.
@@ -23,7 +26,7 @@ mod userdata;
 /// cause the process to terminate the same as Rust panic. Inside Lua runtime it will report as Lua
 /// error. Usually you don't need to worry about this as long as you can return from a function
 /// without required a manual cleanup.
-pub trait Frame: Sized {
+pub trait Frame: FrameState {
     /// Returns `true` if `T` was successfully registered or `false` if the other user data with the
     /// same name already registered.
     fn register_ud<T: UserData>(&mut self) -> bool {
@@ -223,19 +226,9 @@ pub trait Frame: Sized {
 
         unsafe { UserValue::new(self) }
     }
-
-    /// Returns a `lua_State` this frame belong to.
-    ///
-    /// This is a low-level method. Using the returned `lua_State` incorrectly will violate safety
-    /// guarantee of this crate. This does not mark as `unsafe` because invoke this method is safe
-    /// but using the returned pointer required unsafe code.
-    fn state(&self) -> *mut lua_State;
-
-    /// # Safety
-    /// `n` must be greater than zero and `n` values on the top of stack must be owned by the
-    /// caller.
-    unsafe fn release_values(&mut self, n: c_int);
 }
+
+impl<T: FrameState> Frame for T {}
 
 unsafe extern "C-unwind" fn invoker<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
 where

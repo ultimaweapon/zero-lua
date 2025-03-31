@@ -3,7 +3,7 @@ use crate::ffi::{
     lua54_getfield, lua54_istable, lua54_typeerror, zl_checklstring, zl_error, zl_getmetatable,
     zl_tolstring,
 };
-use crate::{BorrowedTable, Error, ErrorKind, Frame, UserData, is_boxed};
+use crate::{BorrowedTable, Error, ErrorKind, FrameState, UserData, is_boxed};
 use std::any::TypeId;
 use std::ffi::c_int;
 use std::marker::PhantomData;
@@ -219,7 +219,7 @@ impl<'a> Context<'a> {
     }
 }
 
-impl<'a> Frame for Context<'a> {
+impl<'a> FrameState for Context<'a> {
     fn state(&self) -> *mut lua_State {
         self.state
     }

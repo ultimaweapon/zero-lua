@@ -1,5 +1,5 @@
 use super::Lua;
-use crate::Frame;
+use crate::FrameState;
 use crate::ffi::{ZL_REGISTRYINDEX, engine_pop, lua_State, zl_getextraspace, zl_ref, zl_unref};
 use std::ffi::c_int;
 use std::rc::Rc;
@@ -35,7 +35,7 @@ impl Drop for ThreadHandle {
     }
 }
 
-impl Frame for ThreadHandle {
+impl FrameState for ThreadHandle {
     #[inline(always)]
     fn state(&self) -> *mut lua_State {
         self.state

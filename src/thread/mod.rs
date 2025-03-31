@@ -2,7 +2,7 @@ pub use self::r#async::*;
 pub use self::context::*;
 pub use self::handle::*;
 
-use crate::Frame;
+use crate::FrameState;
 use crate::ffi::{engine_pop, lua_State, lua54_newstate, zl_close};
 use std::ffi::c_int;
 use std::pin::Pin;
@@ -33,7 +33,7 @@ impl Drop for Lua {
     }
 }
 
-impl Frame for Lua {
+impl FrameState for Lua {
     #[inline(always)]
     fn state(&self) -> *mut lua_State {
         self.0

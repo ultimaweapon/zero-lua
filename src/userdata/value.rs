@@ -1,5 +1,5 @@
-use crate::Frame;
 use crate::ffi::{engine_pop, lua_State};
+use crate::{Frame, FrameState};
 use std::ffi::c_int;
 
 /// Represents a user data in a frame.
@@ -21,7 +21,7 @@ impl<'a, P: Frame> Drop for UserValue<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Frame for UserValue<'a, P> {
+impl<'a, P: Frame> FrameState for UserValue<'a, P> {
     #[inline(always)]
     fn state(&self) -> *mut lua_State {
         self.0.state()

@@ -2,8 +2,8 @@ pub use self::borrowed::*;
 pub use self::frame::*;
 pub use self::key::*;
 
-use crate::Frame;
 use crate::ffi::{engine_pop, lua_State};
+use crate::{Frame, FrameState};
 use std::ffi::c_int;
 
 mod borrowed;
@@ -34,7 +34,7 @@ impl<'a, P: Frame> Drop for Table<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Frame for Table<'a, P> {
+impl<'a, P: Frame> FrameState for Table<'a, P> {
     fn state(&self) -> *mut lua_State {
         self.0.state()
     }

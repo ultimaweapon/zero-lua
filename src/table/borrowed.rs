@@ -1,6 +1,6 @@
 use super::TableGetter;
 use crate::ffi::{engine_pop, lua_State};
-use crate::{Frame, Value};
+use crate::{Frame, FrameState, Value};
 use std::ffi::c_int;
 
 /// Encapsulates a borrowed table in the stack.
@@ -25,7 +25,7 @@ impl<'a, P: Frame> BorrowedTable<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Frame for BorrowedTable<'a, P> {
+impl<'a, P: Frame> FrameState for BorrowedTable<'a, P> {
     #[inline(always)]
     fn state(&self) -> *mut lua_State {
         self.parent.state()
