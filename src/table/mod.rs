@@ -2,7 +2,7 @@ pub use self::borrowed::*;
 pub use self::frame::*;
 pub use self::key::*;
 
-use crate::ffi::{engine_pop, lua_State};
+use crate::ffi::engine_pop;
 use crate::{Frame, FrameState};
 use std::ffi::c_int;
 
@@ -35,11 +35,13 @@ impl<'a, P: Frame> Drop for Table<'a, P> {
 }
 
 impl<'a, P: Frame> FrameState for Table<'a, P> {
-    fn state(&self) -> *mut lua_State {
+    type State = P::State;
+
+    fn state(&self) -> &Self::State {
         self.0.state()
     }
 
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { engine_pop(self.state(), n) };
+        unsafe { engine_pop(self.state().get(), n) };
     }
 }

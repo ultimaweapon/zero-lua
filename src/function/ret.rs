@@ -23,7 +23,7 @@ impl<'a, const N: u16, P: Frame> FixedRet<'a, N, P> {
     /// If `n` is geater than `N`.
     #[inline(always)]
     pub fn to_nil(&self, n: NonZero<u16>) -> Option<()> {
-        unsafe { engine_isnil(self.0.state(), Self::index(n)).then_some(()) }
+        unsafe { engine_isnil(self.0.state().get(), Self::index(n)).then_some(()) }
     }
 
     /// `n` is one-based the same as function arguments.
@@ -33,7 +33,7 @@ impl<'a, const N: u16, P: Frame> FixedRet<'a, N, P> {
     #[inline(always)]
     pub fn to_int(&self, n: NonZero<u16>) -> Option<i64> {
         let mut ok = 0;
-        let val = unsafe { engine_tointegerx(self.0.state(), Self::index(n), &mut ok) };
+        let val = unsafe { engine_tointegerx(self.0.state().get(), Self::index(n), &mut ok) };
 
         if ok == 0 { None } else { Some(val) }
     }
@@ -44,7 +44,7 @@ impl<'a, const N: u16, P: Frame> FixedRet<'a, N, P> {
     /// If `n` is geater than `N`.
     #[inline(always)]
     pub fn to_type(&self, n: NonZero<u16>) -> Type {
-        unsafe { lua54_type(self.0.state(), Self::index(n)) }
+        unsafe { lua54_type(self.0.state().get(), Self::index(n)) }
     }
 
     #[inline(always)]

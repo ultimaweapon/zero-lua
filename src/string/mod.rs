@@ -22,7 +22,7 @@ impl<'a, P: Frame> Str<'a, P> {
     #[inline(always)]
     pub fn to_bytes(&self) -> &[u8] {
         let mut len = 0;
-        let ptr = unsafe { zl_tolstring(self.0.state(), -1, &mut len) };
+        let ptr = unsafe { zl_tolstring(self.0.state().get(), -1, &mut len) };
 
         unsafe { std::slice::from_raw_parts(ptr.cast(), len) }
     }
@@ -35,7 +35,7 @@ impl<'a, P: Frame> Str<'a, P> {
 
     #[inline(always)]
     pub fn to_c_str(&self) -> &CStr {
-        unsafe { CStr::from_ptr(zl_tolstring(self.0.state(), -1, null_mut())) }
+        unsafe { CStr::from_ptr(zl_tolstring(self.0.state().get(), -1, null_mut())) }
     }
 
     /// Invoke [`std::str::from_utf8()`] with the result of [`Self::to_bytes()`].

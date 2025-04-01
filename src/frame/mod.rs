@@ -31,26 +31,26 @@ pub trait Frame: FrameState {
     /// same name already registered.
     fn register_ud<T: UserData>(&mut self) -> bool {
         // SAFETY: 2 is the maximum values we pushed here.
-        unsafe { engine_checkstack(self.state(), 2) };
+        unsafe { engine_checkstack(self.state().get(), 2) };
 
         // Check if exists.
-        let ok = if unsafe { zl_newmetatable(self.state(), T::name().as_ptr()) != 0 } {
+        let ok = if unsafe { zl_newmetatable(self.state().get(), T::name().as_ptr()) != 0 } {
             // Setup metatable.
             T::setup_metatable(&mut ManuallyDrop::new(unsafe { Table::new(self) }));
 
             // Set "typeid".
-            let ud = unsafe { engine_newuserdatauv(self.state(), size_of::<TypeId>(), 0) };
+            let ud = unsafe { engine_newuserdatauv(self.state().get(), size_of::<TypeId>(), 0) };
 
             unsafe { ud.cast::<TypeId>().write_unaligned(TypeId::of::<T>()) };
-            unsafe { engine_setfield(self.state(), -2, c"typeid".as_ptr()) };
+            unsafe { engine_setfield(self.state().get(), -2, c"typeid".as_ptr()) };
 
             // Set finalizer.
             if is_boxed::<T>() {
-                unsafe { engine_pushcclosure(self.state(), finalizer::<Box<T>>, 0) };
-                unsafe { engine_setfield(self.state(), -2, c"__gc".as_ptr()) };
+                unsafe { engine_pushcclosure(self.state().get(), finalizer::<Box<T>>, 0) };
+                unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
             } else if std::mem::needs_drop::<T>() {
-                unsafe { engine_pushcclosure(self.state(), finalizer::<T>, 0) };
-                unsafe { engine_setfield(self.state(), -2, c"__gc".as_ptr()) };
+                unsafe { engine_pushcclosure(self.state().get(), finalizer::<T>, 0) };
+                unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
             }
 
             true
@@ -58,39 +58,39 @@ pub trait Frame: FrameState {
             false
         };
 
-        unsafe { engine_pop(self.state(), 1) };
+        unsafe { engine_pop(self.state().get(), 1) };
 
         ok
     }
 
     fn require_base(&mut self, global: bool) -> Table<Self> {
         // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_base.
-        unsafe { engine_checkstack(self.state(), 3) };
-        unsafe { zl_require_base(self.state(), global) };
+        unsafe { engine_checkstack(self.state().get(), 3) };
+        unsafe { zl_require_base(self.state().get(), global) };
 
         unsafe { Table::new(self) }
     }
 
     fn require_coroutine(&mut self, global: bool) -> Table<Self> {
         // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_coroutine.
-        unsafe { engine_checkstack(self.state(), 3) };
-        unsafe { zl_require_coroutine(self.state(), global) };
+        unsafe { engine_checkstack(self.state().get(), 3) };
+        unsafe { zl_require_coroutine(self.state().get(), global) };
 
         unsafe { Table::new(self) }
     }
 
     fn require_io(&mut self, global: bool) -> Table<Self> {
         // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_io.
-        unsafe { engine_checkstack(self.state(), 3) };
-        unsafe { zl_require_io(self.state(), global) };
+        unsafe { engine_checkstack(self.state().get(), 3) };
+        unsafe { zl_require_io(self.state().get(), global) };
 
         unsafe { Table::new(self) }
     }
 
     fn require_os(&mut self, global: bool) -> Table<Self> {
         // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_os.
-        unsafe { engine_checkstack(self.state(), 3) };
-        unsafe { zl_require_os(self.state(), global) };
+        unsafe { engine_checkstack(self.state().get(), 3) };
+        unsafe { zl_require_os(self.state().get(), global) };
 
         unsafe { Table::new(self) }
     }
@@ -113,7 +113,7 @@ pub trait Frame: FrameState {
         file: impl AsRef<Path>,
     ) -> Result<Result<Function<Self>, Str<Self>>, std::io::Error> {
         // SAFETY: engine_load return either error object or a chunk.
-        unsafe { engine_checkstack(self.state(), 1) };
+        unsafe { engine_checkstack(self.state().get(), 1) };
 
         // Read file.
         let file = file.as_ref();
@@ -129,7 +129,8 @@ pub trait Frame: FrameState {
 
         // Load.
         let name = name.as_ptr().cast();
-        let r = match unsafe { zl_load(self.state(), name, data.as_ptr().cast(), data.len()) } {
+        let r = match unsafe { zl_load(self.state().get(), name, data.as_ptr().cast(), data.len()) }
+        {
             true => Ok(unsafe { Function::new(self) }),
             false => Err(unsafe { Str::new(self) }),
         };
@@ -138,8 +139,8 @@ pub trait Frame: FrameState {
     }
 
     fn push_nil(&mut self) -> Nil<Self> {
-        unsafe { engine_checkstack(self.state(), 1) };
-        unsafe { engine_pushnil(self.state()) };
+        unsafe { engine_checkstack(self.state().get(), 1) };
+        unsafe { engine_pushnil(self.state().get()) };
 
         unsafe { Nil::new(self) }
     }
@@ -147,8 +148,8 @@ pub trait Frame: FrameState {
     fn push_str(&mut self, s: impl AsRef<[u8]>) -> Str<Self> {
         let s = s.as_ref();
 
-        unsafe { engine_checkstack(self.state(), 1) };
-        unsafe { zl_pushlstring(self.state(), s.as_ptr().cast(), s.len()) };
+        unsafe { engine_checkstack(self.state().get(), 1) };
+        unsafe { zl_pushlstring(self.state().get(), s.as_ptr().cast(), s.len()) };
 
         unsafe { Str::new(self) }
     }
@@ -159,48 +160,48 @@ pub trait Frame: FrameState {
         F: Fn(&mut Context) -> Result<(), Error> + RefUnwindSafe + 'static,
     {
         // SAFETY: 3 is maximum items we pushed here.
-        unsafe { engine_checkstack(self.state(), 3) };
+        unsafe { engine_checkstack(self.state().get(), 3) };
 
         if size_of::<F>() == 0 {
-            unsafe { engine_pushcclosure(self.state(), invoker::<F>, 0) };
+            unsafe { engine_pushcclosure(self.state().get(), invoker::<F>, 0) };
         } else if align_of::<F>() <= align_of::<*mut ()>() {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { engine_newuserdatauv(self.state(), size_of::<F>(), 0) };
+            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<F>(), 0) };
 
             unsafe { ptr.cast::<F>().write(f) };
 
             // Set finalizer.
             if std::mem::needs_drop::<F>() {
-                unsafe { engine_createtable(self.state(), 0, 1) };
-                unsafe { engine_pushcclosure(self.state(), finalizer::<F>, 0) };
-                unsafe { engine_setfield(self.state(), -2, c"__gc".as_ptr()) };
-                unsafe { zl_setmetatable(self.state(), -2) };
+                unsafe { engine_createtable(self.state().get(), 0, 1) };
+                unsafe { engine_pushcclosure(self.state().get(), finalizer::<F>, 0) };
+                unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+                unsafe { zl_setmetatable(self.state().get(), -2) };
             }
 
             // Push invoker.
-            unsafe { engine_pushcclosure(self.state(), invoker::<F>, 1) };
+            unsafe { engine_pushcclosure(self.state().get(), invoker::<F>, 1) };
         } else {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { engine_newuserdatauv(self.state(), size_of::<Box<F>>(), 0) };
+            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<Box<F>>(), 0) };
 
             unsafe { ptr.cast::<Box<F>>().write(f.into()) };
 
             // Set finalizer.
-            unsafe { engine_createtable(self.state(), 0, 1) };
-            unsafe { engine_pushcclosure(self.state(), finalizer::<Box<F>>, 0) };
-            unsafe { engine_setfield(self.state(), -2, c"__gc".as_ptr()) };
-            unsafe { zl_setmetatable(self.state(), -2) };
+            unsafe { engine_createtable(self.state().get(), 0, 1) };
+            unsafe { engine_pushcclosure(self.state().get(), finalizer::<Box<F>>, 0) };
+            unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_setmetatable(self.state().get(), -2) };
 
             // Push invoker.
-            unsafe { engine_pushcclosure(self.state(), invoker::<Box<F>>, 1) };
+            unsafe { engine_pushcclosure(self.state().get(), invoker::<Box<F>>, 1) };
         }
 
         unsafe { Function::new(self) }
     }
 
     fn push_table(&mut self, narr: u16, nrec: u16) -> Table<Self> {
-        unsafe { engine_checkstack(self.state(), 1) };
-        unsafe { engine_createtable(self.state(), narr.into(), nrec.into()) };
+        unsafe { engine_checkstack(self.state().get(), 1) };
+        unsafe { engine_createtable(self.state().get(), narr.into(), nrec.into()) };
 
         unsafe { Table::new(self) }
     }
@@ -209,20 +210,20 @@ pub trait Frame: FrameState {
     /// If `T` was not registered with [`Frame::register_ud()`].
     fn push_ud<T: UserData>(&mut self, v: T) -> UserValue<Self> {
         // SAFETY: Maximum pushed from luaL_newmetatable is 2.
-        unsafe { engine_checkstack(self.state(), 3) };
+        unsafe { engine_checkstack(self.state().get(), 3) };
 
         if is_boxed::<T>() {
-            let ptr = unsafe { engine_newuserdatauv(self.state(), size_of::<Box<T>>(), 0) };
+            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<Box<T>>(), 0) };
 
             unsafe { ptr.cast::<Box<T>>().write(v.into()) };
         } else {
-            let ptr = unsafe { engine_newuserdatauv(self.state(), size_of::<T>(), 0) };
+            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<T>(), 0) };
 
             unsafe { ptr.cast::<T>().write(v) };
         }
 
-        unsafe { push_metatable::<T>(self.state()) };
-        unsafe { zl_setmetatable(self.state(), -2) };
+        unsafe { push_metatable::<T>(self.state().get()) };
+        unsafe { zl_setmetatable(self.state().get(), -2) };
 
         unsafe { UserValue::new(self) }
     }

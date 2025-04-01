@@ -1,3 +1,5 @@
+pub(crate) use self::state::*;
+
 use crate::ffi::{
     engine_argerror, engine_gettop, engine_isnil, engine_pop, engine_touserdata, lua_State,
     lua54_getfield, lua54_istable, lua54_typeerror, zl_checklstring, zl_error, zl_getmetatable,
@@ -8,11 +10,13 @@ use std::any::TypeId;
 use std::ffi::c_int;
 use std::marker::PhantomData;
 
+mod state;
+
 /// Encapsulates a `lua_State` passed to `lua_CFunction`.
 ///
 /// All values pushed directly to this struct will become function results.
 pub struct Context<'a> {
-    state: *mut lua_State,
+    state: LocalState,
     args: c_int,
     ret: c_int,
     phantom: PhantomData<&'a ()>,
@@ -24,7 +28,7 @@ impl<'a> Context<'a> {
         let args = unsafe { engine_gettop(state) };
 
         Self {
-            state,
+            state: unsafe { LocalState::new(state) },
             args,
             ret: 0,
             phantom: PhantomData,
@@ -47,7 +51,7 @@ impl<'a> Context<'a> {
         assert!(n > 0);
 
         if n <= self.args {
-            unsafe { engine_isnil(self.state, n) }
+            unsafe { engine_isnil(self.state.get(), n) }
         } else {
             true
         }
@@ -71,7 +75,7 @@ impl<'a> Context<'a> {
 
         // SAFETY: luaL_checklstring never return null.
         let mut l = 0;
-        let v = unsafe { zl_checklstring(self.state, n, &mut l) };
+        let v = unsafe { zl_checklstring(self.state.get(), n, &mut l) };
         let v = unsafe { std::slice::from_raw_parts(v.cast(), l) };
 
         match std::str::from_utf8(v) {
@@ -97,7 +101,7 @@ impl<'a> Context<'a> {
 
         // Get value.
         let mut l = 0;
-        let v = unsafe { zl_tolstring(self.state, n, &mut l) };
+        let v = unsafe { zl_tolstring(self.state.get(), n, &mut l) };
 
         if v.is_null() {
             return None;
@@ -124,8 +128,8 @@ impl<'a> Context<'a> {
         if n > self.args {
             // lua_istable require a valid index so we need to emulate its behavior in this case.
             self.arg_out_of_bound(n, b"table");
-        } else if !unsafe { lua54_istable(self.state, n) } {
-            unsafe { lua54_typeerror(self.state, n, c"table".as_ptr()) };
+        } else if !unsafe { lua54_istable(self.state.get(), n) } {
+            unsafe { lua54_typeerror(self.state.get(), n, c"table".as_ptr()) };
         }
 
         unsafe { BorrowedTable::new(self, n) }
@@ -140,7 +144,7 @@ impl<'a> Context<'a> {
     pub fn try_table(&mut self, n: c_int) -> Option<BorrowedTable<Self>> {
         assert!(n > 0);
 
-        if n > self.args || !unsafe { lua54_istable(self.state, n) } {
+        if n > self.args || !unsafe { lua54_istable(self.state.get(), n) } {
             return None;
         }
 
@@ -159,23 +163,23 @@ impl<'a> Context<'a> {
         }
 
         // We emulate luaL_checkudata here since we need to get additional field from metatable.
-        let ptr = unsafe { engine_touserdata(self.state, n).cast_const() };
+        let ptr = unsafe { engine_touserdata(self.state.get(), n).cast_const() };
 
-        if ptr.is_null() || unsafe { zl_getmetatable(self.state, n) == 0 } {
-            unsafe { lua54_typeerror(self.state, n, T::name().as_ptr()) };
+        if ptr.is_null() || unsafe { zl_getmetatable(self.state.get(), n) == 0 } {
+            unsafe { lua54_typeerror(self.state.get(), n, T::name().as_ptr()) };
         }
 
-        unsafe { lua54_getfield(self.state, -1, c"typeid".as_ptr()) };
+        unsafe { lua54_getfield(self.state.get(), -1, c"typeid".as_ptr()) };
 
         // SAFETY: TypeId is Copy.
         let id = TypeId::of::<T>();
-        let ud = unsafe { engine_touserdata(self.state, -1) };
+        let ud = unsafe { engine_touserdata(self.state.get(), -1) };
         let ok = unsafe { !ud.is_null() && ud.cast::<TypeId>().read_unaligned() == id };
 
-        unsafe { engine_pop(self.state, 2) };
+        unsafe { engine_pop(self.state.get(), 2) };
 
         if !ok {
-            unsafe { lua54_typeerror(self.state, n, T::name().as_ptr()) };
+            unsafe { lua54_typeerror(self.state.get(), n, T::name().as_ptr()) };
         } else if is_boxed::<T>() {
             unsafe { (*ptr.cast::<Box<T>>()).as_ref() }
         } else {
@@ -191,14 +195,16 @@ impl<'a> Context<'a> {
     pub(crate) fn raise(&self, e: Error) -> ! {
         let (n, e) = match e.into() {
             // SAFETY: n only used to format the message.
-            ErrorKind::Arg(n, e) => unsafe { engine_argerror(self.state, n, e.as_ptr().cast()) },
+            ErrorKind::Arg(n, e) => unsafe {
+                engine_argerror(self.state.get(), n, e.as_ptr().cast())
+            },
             ErrorKind::ArgType(n, e) => (n, e),
-            ErrorKind::Other(e) => unsafe { zl_error(self.state, e.as_ptr().cast()) },
+            ErrorKind::Other(e) => unsafe { zl_error(self.state.get(), e.as_ptr().cast()) },
         };
 
         if n <= self.args {
             // SAFETY: n is positive.
-            unsafe { lua54_typeerror(self.state, n, e.as_ptr().cast()) };
+            unsafe { lua54_typeerror(self.state.get(), n, e.as_ptr().cast()) };
         } else {
             // lua54_typeerror require index to be valid so we need to emulate its behavior in this
             // case.
@@ -215,15 +221,19 @@ impl<'a> Context<'a> {
         m.extend_from_slice(s);
         m.push(0);
 
-        unsafe { engine_argerror(self.state, n, m.as_ptr().cast()) };
+        unsafe { engine_argerror(self.state.get(), n, m.as_ptr().cast()) };
     }
 }
 
 impl<'a> FrameState for Context<'a> {
-    fn state(&self) -> *mut lua_State {
-        self.state
+    type State = LocalState;
+
+    #[inline(always)]
+    fn state(&self) -> &Self::State {
+        &self.state
     }
 
+    #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
         // SAFETY: We don't need to check for overflow here since we should get hit by a stack
         // overflow before c_int overflow.

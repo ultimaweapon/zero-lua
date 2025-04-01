@@ -19,13 +19,13 @@ impl<'a, P: Frame> Function<'a, P> {
         // Ensure stack for results. We can't take out the parent here since engine_checkstack can
         // throw a C++ exception.
         if R::N > 0 {
-            unsafe { engine_checkstack(self.0.as_ref().unwrap().state(), R::N) };
+            unsafe { engine_checkstack(self.0.as_ref().unwrap().state().get(), R::N) };
         }
 
         // Call.
         let p = self.0.take().unwrap();
 
-        match unsafe { zl_pcall(p.state(), 0, R::N, 0) } {
+        match unsafe { zl_pcall(p.state().get(), 0, R::N, 0) } {
             true => Ok(unsafe { R::new(p) }),
             false => Err(unsafe { Str::new(p) }),
         }

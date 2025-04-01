@@ -1,5 +1,5 @@
 use super::TableGetter;
-use crate::ffi::{engine_pop, lua_State};
+use crate::ffi::engine_pop;
 use crate::{Frame, FrameState, Value};
 use std::ffi::c_int;
 
@@ -26,13 +26,15 @@ impl<'a, P: Frame> BorrowedTable<'a, P> {
 }
 
 impl<'a, P: Frame> FrameState for BorrowedTable<'a, P> {
+    type State = P::State;
+
     #[inline(always)]
-    fn state(&self) -> *mut lua_State {
+    fn state(&self) -> &Self::State {
         self.parent.state()
     }
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { engine_pop(self.state(), n) };
+        unsafe { engine_pop(self.state().get(), n) };
     }
 }

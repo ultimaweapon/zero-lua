@@ -24,6 +24,7 @@ mod function;
 mod global;
 mod nil;
 mod option;
+mod state;
 mod string;
 mod table;
 mod thread;
@@ -59,29 +60,29 @@ impl<'a, P: Frame> Value<'a, P> {
 
         // SAFETY: We have an exclusive access to the value, which mean top of the stack always be a
         // value.
-        unsafe { engine_checkstack(state, 1) };
+        unsafe { engine_checkstack(state.get(), 1) };
 
-        match unsafe { zl_getmetafield(state, -1, c"__name".as_ptr()) } {
+        match unsafe { zl_getmetafield(state.get(), -1, c"__name".as_ptr()) } {
             Type::None => unreachable!(),
             Type::Nil => (), // luaL_getmetafield push nothing.
             Type::String => unsafe {
-                let v = zl_tolstring(state, -1, null_mut());
+                let v = zl_tolstring(state.get(), -1, null_mut());
                 let v = CStr::from_ptr(v).to_owned();
 
-                engine_pop(state, 1);
+                engine_pop(state.get(), 1);
 
                 return v.into();
             },
-            _ => unsafe { engine_pop(state, 1) },
+            _ => unsafe { engine_pop(state.get(), 1) },
         }
 
         Cow::Borrowed(self.ty().name())
     }
 
     pub(crate) unsafe fn from_table<K: TableGetter>(p: &'a mut P, t: c_int, k: K) -> Self {
-        unsafe { engine_checkstack(p.state(), 1) };
+        unsafe { engine_checkstack(p.state().get(), 1) };
 
-        match unsafe { k.get_value(p.state(), t) } {
+        match unsafe { k.get_value(p.state().get(), t) } {
             Type::None => unreachable!(),
             Type::Nil => Self::Nil(unsafe { Nil::new(p) }),
             Type::Boolean => todo!(),
