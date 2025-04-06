@@ -1,7 +1,7 @@
 pub use self::result::*;
 
 use self::resume::Resume;
-use super::DynamicRet;
+use super::Ret;
 use crate::ffi::{LUA_OK, LUA_YIELD, engine_pop};
 use crate::{Frame, FrameState, Str};
 use std::cell::Cell;
@@ -50,8 +50,8 @@ impl<'a, P: Frame> AsyncCall<'a, P> {
         );
 
         match f.await {
-            LUA_OK => unsafe { Ok(Async::Finish(DynamicRet::with_values(&mut self.result, n))) },
-            LUA_YIELD => unsafe { Ok(Async::Yield(DynamicRet::with_values(&mut self.result, n))) },
+            LUA_OK => unsafe { Ok(Async::Finish(Ret::new(&mut self.result, n))) },
+            LUA_YIELD => unsafe { Ok(Async::Yield(Ret::new(&mut self.result, n))) },
             _ => unsafe { Err(Str::new(&mut self.result)) },
         }
     }
@@ -89,8 +89,8 @@ impl<'a, P: Frame> FrameState for AsyncCall<'a, P> {
 
 /// Results of polling yieldable function.
 pub enum Async<'a, P: Frame> {
-    Yield(DynamicRet<'a, P>),
-    Finish(DynamicRet<'a, P>),
+    Yield(Ret<'a, P>),
+    Finish(Ret<'a, P>),
 }
 
 /// Context to poll yieldable function.

@@ -1,13 +1,13 @@
 pub use self::r#async::*;
-pub use self::ret::*;
+pub use self::result::*;
 
 use crate::FrameState;
-use crate::ffi::{engine_checkstack, engine_gettop, engine_pop, zl_pcall};
+use crate::ffi::{LUA_MULTRET, engine_gettop, engine_pop, zl_pcall};
 use crate::{AsyncState, Frame, MainState, Str};
 use std::ffi::c_int;
 
 mod r#async;
-mod ret;
+mod result;
 
 /// Encapsulates a callable object on the top of Lua stack.
 pub struct Function<'a, P: Frame> {
@@ -38,20 +38,18 @@ where
 {
     /// This will consume the callable object so it will not pushed to parent frame.
     #[inline(always)]
-    pub fn call<R: FuncRet<'a, P>>(mut self) -> Result<R, Str<'a, P>> {
-        // Ensure stack for results. We can't take out the parent here since engine_checkstack can
-        // throw a C++ exception.
-        if R::N > 0 {
-            unsafe { engine_checkstack(self.parent.as_ref().unwrap().state().get(), R::N) };
-        }
-
+    pub fn call(mut self) -> Result<Ret<'a, P>, Str<'a, P>> {
         // Call.
         let p = self.parent.take().unwrap();
 
-        match unsafe { zl_pcall(p.state().get(), self.args, R::N, 0) } {
-            true => Ok(unsafe { R::new(p, self.func - 1) }),
-            false => Err(unsafe { Str::new(p) }),
+        if !unsafe { zl_pcall(p.state().get(), self.args, LUA_MULTRET, 0) } {
+            return Err(unsafe { Str::new(p) });
         }
+
+        // Get results.
+        let l = unsafe { engine_gettop(p.state().get()) - (self.func - 1) };
+
+        Ok(unsafe { Ret::new(p, l) })
     }
 }
 

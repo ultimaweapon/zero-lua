@@ -1,6 +1,6 @@
 use super::{Frame, FrameState};
 use crate::ffi::engine_pop;
-use crate::{DynamicRet, YieldValues, Yieldable};
+use crate::{Ret, YieldValues, Yieldable};
 use std::ffi::c_int;
 use std::future::poll_fn;
 use std::task::Poll;
@@ -23,7 +23,7 @@ where
         }
     }
 
-    pub async fn yield_now(mut self) -> DynamicRet<'a, P> {
+    pub async fn yield_now(mut self) -> Ret<'a, P> {
         // Set values to yield.
         let parent = self.parent.take().unwrap();
         let values = Yieldable::values(parent.state());
@@ -46,7 +46,7 @@ where
 
         drop(guard);
 
-        unsafe { DynamicRet::with_values(parent, n) }
+        unsafe { Ret::new(parent, n) }
     }
 }
 
