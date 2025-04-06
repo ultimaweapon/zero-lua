@@ -51,15 +51,15 @@ where
             unsafe { zl_getextraspace(L).cast::<*mut AsyncContext>().write(cx) };
             v
         }
-        Poll::Pending => unsafe { async_yield(L, f) },
+        Poll::Pending => unsafe { async_yield(L, f, cx) },
     }
 }
 
-unsafe fn async_yield<F>(state: *mut lua_State, f: Pin<Box<F>>) -> !
+unsafe fn async_yield<F>(state: *mut lua_State, f: Pin<Box<F>>, cx: &mut AsyncContext) -> !
 where
     F: Future<Output = c_int>,
 {
-    unsafe { engine_checkstack(state, 2) };
+    unsafe { engine_checkstack(state, 3) };
 
     // All lua_pushlightuserdata never fails.
     let f = unsafe { Pin::into_inner_unchecked(f) };
@@ -67,8 +67,9 @@ where
 
     unsafe { zl_pushlightuserdata(state, drop::<F> as _) };
     unsafe { zl_pushlightuserdata(state, f.cast()) };
+    unsafe { zl_pushlightuserdata(state, (cx as *mut AsyncContext).cast()) };
 
-    unsafe { zl_yieldk(state, 2, f as isize, poll::<F>) };
+    unsafe { zl_yieldk(state, 3, f as isize, poll::<F>) };
 }
 
 unsafe fn drop<F>(f: *mut ()) {
@@ -98,6 +99,6 @@ where
             unsafe { zl_getextraspace(L).cast::<*mut AsyncContext>().write(cx) };
             v
         }
-        Poll::Pending => unsafe { async_yield(L, f) },
+        Poll::Pending => unsafe { async_yield(L, f, cx) },
     }
 }

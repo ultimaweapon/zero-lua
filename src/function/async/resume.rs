@@ -36,30 +36,6 @@ impl<'a> Resume<'a> {
             pending,
         }
     }
-
-    fn handle_yield(&mut self) -> Poll<c_int> {
-        // Keep pending future.
-        let future = unsafe { engine_touserdata(self.state.get(), -1).cast() };
-        let drop = unsafe { engine_touserdata(self.state.get(), -2) };
-
-        *self.pending = Some(PendingFuture {
-            future,
-            drop: unsafe { transmute(drop) },
-        });
-
-        unsafe { engine_pop(self.state.get(), 2) };
-
-        // Check how we yield.
-        match self.values.get() {
-            YieldValues::None => Poll::Pending,
-            YieldValues::FromThread(v) => {
-                *self.results = v;
-                self.values.set(YieldValues::FromThread(0)); // Prevent double free on future side.
-                Poll::Ready(LUA_YIELD)
-            }
-            YieldValues::ToThread(_) => unreachable!(),
-        }
-    }
 }
 
 impl<'a> Future for Resume<'a> {
@@ -97,9 +73,37 @@ impl<'a> Future for Resume<'a> {
 
         drop(l);
 
-        match r {
-            LUA_YIELD => self.handle_yield(),
-            v => Poll::Ready(v),
+        if r != LUA_YIELD {
+            return Poll::Ready(r);
+        }
+
+        // Check if yield from our invokder.
+        let cx = &mut cx as *mut AsyncContext as *mut u8;
+
+        if *self.results != 3 || unsafe { engine_touserdata(self.state.get(), -1) != cx } {
+            return Poll::Ready(LUA_YIELD);
+        }
+
+        // Keep pending future.
+        let future = unsafe { engine_touserdata(self.state.get(), -2).cast() };
+        let drop = unsafe { engine_touserdata(self.state.get(), -3) };
+
+        *self.pending = Some(PendingFuture {
+            future,
+            drop: unsafe { transmute(drop) },
+        });
+
+        unsafe { engine_pop(self.state.get(), 3) };
+
+        // Check how we yield.
+        match self.values.get() {
+            YieldValues::None => Poll::Pending,
+            YieldValues::FromThread(v) => {
+                *self.results = v;
+                self.values.set(YieldValues::FromThread(0)); // Prevent double free on future side.
+                Poll::Ready(LUA_YIELD)
+            }
+            YieldValues::ToThread(_) => unreachable!(),
         }
     }
 }
