@@ -18,6 +18,7 @@ pub struct AsyncCall<'a, P: Frame> {
     args: c_int,
     values: Rc<Cell<YieldValues>>,
     pending: Option<PendingFuture>,
+    polled: bool,
 }
 
 impl<'a, P: Frame> AsyncCall<'a, P> {
@@ -30,6 +31,7 @@ impl<'a, P: Frame> AsyncCall<'a, P> {
             args,
             values: Rc::default(),
             pending: None,
+            polled: false,
         }
     }
 
@@ -49,6 +51,8 @@ impl<'a, P: Frame> AsyncCall<'a, P> {
             &mut self.pending,
         );
 
+        self.polled = true;
+
         match f.await {
             LUA_OK => unsafe { Ok(Async::Finish(Ret::new(&mut self.result, n))) },
             LUA_YIELD => unsafe { Ok(Async::Yield(Ret::new(&mut self.result, n))) },
@@ -64,12 +68,13 @@ impl<'a, P: Frame> Drop for AsyncCall<'a, P> {
             unsafe { (v.drop)(v.future) };
         }
 
-        // Pop stack.
         if self.args != 0 {
             unsafe { engine_pop(self.state().get(), self.args) };
         }
 
-        unsafe { engine_pop(self.state().get(), 1) };
+        if !self.polled {
+            unsafe { engine_pop(self.state().get(), 1) };
+        }
     }
 }
 
