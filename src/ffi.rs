@@ -1,5 +1,10 @@
 use crate::Type;
-use std::ffi::{c_char, c_int};
+use std::ffi::{c_char, c_int, c_void};
+
+pub const LUA_OK: c_int = 0;
+pub const LUA_YIELD: c_int = 1;
+
+pub const LUA_MULTRET: c_int = -1;
 
 #[allow(non_camel_case_types)]
 #[repr(C)]
@@ -24,6 +29,7 @@ unsafe extern "C-unwind" {
     pub fn engine_checkstack(L: *mut lua_State, n: c_int);
     pub fn engine_pushnil(L: *mut lua_State);
     pub fn zl_pushlstring(L: *mut lua_State, s: *const c_char, len: usize) -> *const c_char;
+    pub fn zl_pushlightuserdata(L: *mut lua_State, p: *mut c_void);
     pub fn engine_pushcclosure(
         L: *mut lua_State,
         fp: unsafe extern "C-unwind" fn(*mut lua_State) -> c_int,
@@ -60,4 +66,16 @@ unsafe extern "C-unwind" {
     pub fn zl_error(L: *mut lua_State, msg: *const c_char) -> !;
     pub fn zl_getextraspace(L: *mut lua_State) -> *mut u8;
     pub fn zl_newthread(L: *mut lua_State) -> *mut lua_State;
+    pub fn zl_resume(
+        L: *mut lua_State,
+        from: *mut lua_State,
+        nargs: c_int,
+        nresults: &mut c_int,
+    ) -> c_int;
+    pub fn zl_yieldk(
+        L: *mut lua_State,
+        nresults: c_int,
+        ctx: isize,
+        k: unsafe extern "C-unwind" fn(L: *mut lua_State, status: c_int, ctx: isize) -> c_int,
+    ) -> !;
 }

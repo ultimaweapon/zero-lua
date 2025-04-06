@@ -1,4 +1,4 @@
-use crate::ffi::{engine_isnil, engine_tointegerx, lua54_type};
+use crate::ffi::{LUA_MULTRET, engine_gettop, engine_isnil, engine_tointegerx, lua54_type};
 use crate::{Frame, Type};
 use std::ffi::c_int;
 use std::num::NonZero;
@@ -10,7 +10,7 @@ pub unsafe trait FuncRet<'a, P: Frame> {
     /// # Safety
     /// The owner of [`FuncRet::N`] items at the top of stack will be transferred to the returned
     /// [`FuncRet`].
-    unsafe fn new(p: &'a mut P) -> Self;
+    unsafe fn new(parent: &'a mut P, base: c_int) -> Self;
 }
 
 /// Implementation of [`FuncRet`] with a fixed number of results.
@@ -67,7 +67,41 @@ unsafe impl<'a, const N: u16, P: Frame> FuncRet<'a, P> for FixedRet<'a, N, P> {
     const N: c_int = N as c_int;
 
     #[inline(always)]
-    unsafe fn new(p: &'a mut P) -> Self {
-        Self(p)
+    unsafe fn new(parent: &'a mut P, _: c_int) -> Self {
+        Self(parent)
+    }
+}
+
+/// Implementation of [`FuncRet`] with dynamic number of results.
+///
+/// This encapsulates the results from a call with `LUA_MULTRET`.
+pub struct DynamicRet<'a, P: Frame> {
+    parent: &'a mut P,
+    values: c_int,
+}
+
+impl<'a, P: Frame> DynamicRet<'a, P> {
+    pub(crate) unsafe fn with_values(parent: &'a mut P, values: c_int) -> Self {
+        Self { parent, values }
+    }
+}
+
+impl<'a, P: Frame> Drop for DynamicRet<'a, P> {
+    #[inline(always)]
+    fn drop(&mut self) {
+        if self.values > 0 {
+            unsafe { self.parent.release_values(self.values) };
+        }
+    }
+}
+
+unsafe impl<'a, P: Frame> FuncRet<'a, P> for DynamicRet<'a, P> {
+    const N: c_int = LUA_MULTRET;
+
+    #[inline(always)]
+    unsafe fn new(parent: &'a mut P, base: c_int) -> Self {
+        let values = unsafe { engine_gettop(parent.state().get()) - base };
+
+        Self { parent, values }
     }
 }

@@ -1,9 +1,8 @@
-pub(crate) use self::state::*;
+pub use self::state::*;
 
 use crate::ffi::{
-    engine_argerror, engine_gettop, engine_isnil, engine_pop, engine_touserdata, lua_State,
-    lua54_getfield, lua54_istable, lua54_typeerror, zl_checklstring, zl_error, zl_getmetatable,
-    zl_tolstring,
+    engine_argerror, engine_gettop, engine_isnil, engine_pop, engine_touserdata, lua54_getfield,
+    lua54_istable, lua54_typeerror, zl_checklstring, zl_error, zl_getmetatable, zl_tolstring,
 };
 use crate::{BorrowedTable, Error, ErrorKind, FrameState, UserData, is_boxed};
 use std::any::TypeId;
@@ -15,20 +14,20 @@ mod state;
 /// Encapsulates a `lua_State` passed to `lua_CFunction`.
 ///
 /// All values pushed directly to this struct will become function results.
-pub struct Context<'a> {
-    state: LocalState,
+pub struct Context<'a, S> {
+    state: S,
     args: c_int,
     ret: c_int,
     phantom: PhantomData<&'a ()>,
 }
 
-impl<'a> Context<'a> {
+impl<'a, S: LocalState> Context<'a, S> {
     #[inline(always)]
-    pub(crate) unsafe fn new(state: *mut lua_State) -> Self {
-        let args = unsafe { engine_gettop(state) };
+    pub(crate) fn new(state: S) -> Self {
+        let args = unsafe { engine_gettop(state.get()) };
 
         Self {
-            state: unsafe { LocalState::new(state) },
+            state,
             args,
             ret: 0,
             phantom: PhantomData,
@@ -37,6 +36,7 @@ impl<'a> Context<'a> {
 
     /// Returns number of arguments for the current function. This also the index of the last
     /// argument.
+    #[inline(always)]
     pub fn args(&self) -> c_int {
         self.args
     }
@@ -225,8 +225,8 @@ impl<'a> Context<'a> {
     }
 }
 
-impl<'a> FrameState for Context<'a> {
-    type State = LocalState;
+impl<'a, S: LocalState> FrameState for Context<'a, S> {
+    type State = S;
 
     #[inline(always)]
     fn state(&self) -> &Self::State {

@@ -1,5 +1,7 @@
 pub(crate) use self::state::*;
+pub use self::r#yield::*;
 
+use self::r#async::async_invoker;
 use self::userdata::push_metatable;
 use crate::ffi::{
     ZL_REGISTRYINDEX, engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop,
@@ -8,8 +10,8 @@ use crate::ffi::{
     zl_require_io, zl_require_os, zl_setmetatable,
 };
 use crate::{
-    Context, Error, Function, GlobalSetter, Nil, Str, Table, TableFrame, TableGetter, TableSetter,
-    UserData, UserValue, Value, is_boxed,
+    Context, Error, Function, GlobalSetter, Nil, NonYieldable, Str, Table, TableFrame, TableGetter,
+    TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::{CStr, c_int};
@@ -17,8 +19,10 @@ use std::mem::ManuallyDrop;
 use std::panic::RefUnwindSafe;
 use std::path::Path;
 
+mod r#async;
 mod state;
 mod userdata;
+mod r#yield;
 
 /// Virtual frame in a Lua stack.
 ///
@@ -157,7 +161,7 @@ pub trait Frame: FrameState {
     /// See [`Context`] for how to return some values to Lua.
     fn push_fn<F>(&mut self, f: F) -> Function<Self>
     where
-        F: Fn(&mut Context) -> Result<(), Error> + RefUnwindSafe + 'static,
+        F: Fn(&mut Context<NonYieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
     {
         // SAFETY: 3 is maximum items we pushed here.
         unsafe { engine_checkstack(self.state().get(), 3) };
@@ -227,15 +231,67 @@ pub trait Frame: FrameState {
 
         unsafe { UserValue::new(self) }
     }
+
+    /// See [`Context`] for how to return some values to Lua.
+    fn push_async<F>(&mut self, f: F) -> Function<Self>
+    where
+        F: AsyncFn(&mut Context<Yieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
+    {
+        // SAFETY: 3 is maximum items we pushed here.
+        unsafe { engine_checkstack(self.state().get(), 3) };
+
+        if size_of::<F>() == 0 {
+            unsafe { engine_pushcclosure(self.state().get(), async_invoker::<F>, 0) };
+        } else if align_of::<F>() <= align_of::<*mut ()>() {
+            // Move Rust function to Lua user data.
+            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<F>(), 0) };
+
+            unsafe { ptr.cast::<F>().write(f) };
+
+            // Set finalizer.
+            if std::mem::needs_drop::<F>() {
+                unsafe { engine_createtable(self.state().get(), 0, 1) };
+                unsafe { engine_pushcclosure(self.state().get(), finalizer::<F>, 0) };
+                unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+                unsafe { zl_setmetatable(self.state().get(), -2) };
+            }
+
+            // Push invoker.
+            unsafe { engine_pushcclosure(self.state().get(), async_invoker::<F>, 1) };
+        } else {
+            // Move Rust function to Lua user data.
+            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<Box<F>>(), 0) };
+
+            unsafe { ptr.cast::<Box<F>>().write(f.into()) };
+
+            // Set finalizer.
+            unsafe { engine_createtable(self.state().get(), 0, 1) };
+            unsafe { engine_pushcclosure(self.state().get(), finalizer::<Box<F>>, 0) };
+            unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_setmetatable(self.state().get(), -2) };
+
+            // Push invoker.
+            unsafe { engine_pushcclosure(self.state().get(), async_invoker::<Box<F>>, 1) };
+        }
+
+        unsafe { Function::new(self) }
+    }
+
+    fn begin_yield(&mut self) -> Yield<Self>
+    where
+        Self: FrameState<State = Yieldable>,
+    {
+        Yield::new(self)
+    }
 }
 
 impl<T: FrameState> Frame for T {}
 
 unsafe extern "C-unwind" fn invoker<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
 where
-    F: Fn(&mut Context) -> Result<(), Error> + RefUnwindSafe + 'static,
+    F: Fn(&mut Context<NonYieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
 {
-    let mut cx = unsafe { Context::new(L) };
+    let mut cx = unsafe { Context::new(NonYieldable::new(L)) };
     let cb = if size_of::<F>() == 0 {
         std::ptr::dangling::<F>()
     } else {
@@ -250,7 +306,10 @@ where
     }
 }
 
-unsafe extern "C-unwind" fn finalizer<T>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int {
+unsafe extern "C-unwind" fn finalizer<T>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
+where
+    T: 'static,
+{
     let ptr = unsafe { engine_touserdata(L, 1).cast::<T>() };
     unsafe { std::ptr::drop_in_place(ptr) };
     0

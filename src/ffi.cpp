@@ -11,6 +11,7 @@
 
 static_assert(sizeof(lua_Integer) == sizeof(int64_t));
 static_assert(std::is_signed<lua_Integer>::value);
+static_assert(sizeof(lua_KContext) == sizeof(intptr_t));
 static_assert(LUA_EXTRASPACE == sizeof(void *));
 
 extern "C" int ZL_REGISTRYINDEX = LUA_REGISTRYINDEX;
@@ -92,6 +93,11 @@ extern "C" void engine_pushnil(lua_State *L)
 extern "C" const char *zl_pushlstring(lua_State *L, const char *s, size_t len)
 {
     return lua_pushlstring(L, s, len);
+}
+
+extern "C" void zl_pushlightuserdata(lua_State *L, void *p)
+{
+    lua_pushlightuserdata(L, p);
 }
 
 extern "C" void engine_pushcclosure(lua_State *L, int (*fn) (lua_State *L), int n)
@@ -252,4 +258,14 @@ extern "C" void *zl_getextraspace(lua_State *L)
 extern "C" lua_State *zl_newthread(lua_State *L)
 {
     return lua_newthread(L);
+}
+
+extern "C" int zl_resume(lua_State *L, lua_State *from, int nargs, int *nresults)
+{
+    return lua_resume(L, from, nargs, nresults);
+}
+
+extern "C" int zl_yieldk(lua_State *L, int nresults, intptr_t ctx, int (*k) (lua_State *L, int status, intptr_t ctx))
+{
+    return lua_yieldk(L, nresults, ctx, k);
 }
