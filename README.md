@@ -4,7 +4,7 @@ Zero Lua is a Rust bindings to Lua 5.4 with zero overhead in most parts. Thanks 
 
 Zero Lua use a virtual frame to achieve memory safety with zero cost. Each frame has a starting point in a Lua stack. The frame below this starting point is a parent frame. The parent frame always mutable borrowed by a child frame. Each child frame responsible to release all of its value before release a mutable borrow to the parent frame.
 
-> [!WARNING]
+> [!IMPORTANT]
 > Zero Lua can only be used with unwinding panic. You will get a compile error if you use abort-on-panic.
 
 ## Development

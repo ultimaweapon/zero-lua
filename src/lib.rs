@@ -1,3 +1,4 @@
+pub use self::context::*;
 pub use self::error::*;
 pub use self::frame::*;
 pub use self::function::*;
@@ -17,6 +18,7 @@ use std::ffi::{CStr, c_int};
 use std::mem::transmute;
 use std::ptr::null_mut;
 
+mod context;
 mod error;
 mod ffi;
 mod frame;
