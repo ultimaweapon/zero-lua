@@ -1,6 +1,7 @@
 use crate::ffi::{engine_pop, engine_touserdata, lua_State, lua54_getfield, zl_globalmetatable};
 use crate::{Type, UserData};
 use std::any::{TypeId, type_name};
+use std::ffi::c_int;
 
 /// # Safety
 /// Lua stack must have at least 2 slots available.
@@ -34,4 +35,13 @@ pub unsafe fn push_metatable<T: UserData>(#[allow(non_snake_case)] L: *mut lua_S
     if id != TypeId::of::<T>() {
         panic!("{} is not registered", type_name::<T>())
     }
+}
+
+pub unsafe extern "C-unwind" fn finalizer<T>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
+where
+    T: 'static,
+{
+    let ptr = unsafe { engine_touserdata(L, 1).cast::<T>() };
+    unsafe { std::ptr::drop_in_place(ptr) };
+    0
 }

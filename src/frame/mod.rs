@@ -3,19 +3,19 @@ pub use self::r#yield::*;
 
 use self::r#async::async_invoker;
 use self::function::invoker;
-use self::userdata::push_metatable;
+use self::userdata::{finalizer, push_metatable};
 use crate::ffi::{
     ZL_REGISTRYINDEX, engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop,
-    engine_pushcclosure, engine_pushnil, engine_setfield, engine_touserdata, lua_State, zl_load,
-    zl_newmetatable, zl_pushlstring, zl_require_base, zl_require_coroutine, zl_require_io,
-    zl_require_math, zl_require_os, zl_setmetatable,
+    engine_pushcclosure, engine_pushnil, engine_setfield, zl_load, zl_newmetatable, zl_pushlstring,
+    zl_require_base, zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os,
+    zl_require_string, zl_setmetatable,
 };
 use crate::{
     Context, Error, Function, GlobalSetter, MainState, Nil, NonYieldable, Str, Table, TableFrame,
     TableGetter, TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
 };
 use std::any::TypeId;
-use std::ffi::{CStr, c_int};
+use std::ffi::CStr;
 use std::mem::ManuallyDrop;
 use std::panic::RefUnwindSafe;
 use std::path::Path;
@@ -112,6 +112,14 @@ pub trait Frame: FrameState {
         unsafe { Table::new(self) }
     }
 
+    fn require_string(&mut self, global: bool) -> Table<Self> {
+        // SAFETY: 4 is maximum stack size used by luaL_requiref + luaopen_string.
+        unsafe { engine_checkstack(self.state().get(), 4) };
+        unsafe { zl_require_string(self.state().get(), global) };
+
+        unsafe { Table::new(self) }
+    }
+
     fn set_registry<K: TableSetter>(&mut self, k: K) -> TableFrame<Self, K> {
         unsafe { TableFrame::new(self, ZL_REGISTRYINDEX, k) }
     }
@@ -171,6 +179,35 @@ pub trait Frame: FrameState {
         unsafe { Str::new(self) }
     }
 
+    fn push_table(&mut self, narr: u16, nrec: u16) -> Table<Self> {
+        unsafe { engine_checkstack(self.state().get(), 1) };
+        unsafe { engine_createtable(self.state().get(), narr.into(), nrec.into()) };
+
+        unsafe { Table::new(self) }
+    }
+
+    /// # Panics
+    /// If `T` was not registered with [`Frame::register_ud()`].
+    fn push_ud<T: UserData>(&mut self, v: T) -> UserValue<Self> {
+        // SAFETY: Maximum pushed from luaL_newmetatable is 2.
+        unsafe { engine_checkstack(self.state().get(), 3) };
+
+        if is_boxed::<T>() {
+            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<Box<T>>(), 0) };
+
+            unsafe { ptr.cast::<Box<T>>().write(v.into()) };
+        } else {
+            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<T>(), 0) };
+
+            unsafe { ptr.cast::<T>().write(v) };
+        }
+
+        unsafe { push_metatable::<T>(self.state().get()) };
+        unsafe { zl_setmetatable(self.state().get(), -2) };
+
+        unsafe { UserValue::new(self) }
+    }
+
     /// See [`Context`] for how to return some values to Lua.
     fn push_fn<F>(&mut self, f: F) -> Function<Self>
     where
@@ -214,35 +251,6 @@ pub trait Frame: FrameState {
         }
 
         unsafe { Function::new(self) }
-    }
-
-    fn push_table(&mut self, narr: u16, nrec: u16) -> Table<Self> {
-        unsafe { engine_checkstack(self.state().get(), 1) };
-        unsafe { engine_createtable(self.state().get(), narr.into(), nrec.into()) };
-
-        unsafe { Table::new(self) }
-    }
-
-    /// # Panics
-    /// If `T` was not registered with [`Frame::register_ud()`].
-    fn push_ud<T: UserData>(&mut self, v: T) -> UserValue<Self> {
-        // SAFETY: Maximum pushed from luaL_newmetatable is 2.
-        unsafe { engine_checkstack(self.state().get(), 3) };
-
-        if is_boxed::<T>() {
-            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<Box<T>>(), 0) };
-
-            unsafe { ptr.cast::<Box<T>>().write(v.into()) };
-        } else {
-            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<T>(), 0) };
-
-            unsafe { ptr.cast::<T>().write(v) };
-        }
-
-        unsafe { push_metatable::<T>(self.state().get()) };
-        unsafe { zl_setmetatable(self.state().get(), -2) };
-
-        unsafe { UserValue::new(self) }
     }
 
     /// See [`Context`] for how to return some values to Lua.
@@ -299,12 +307,3 @@ pub trait Frame: FrameState {
 }
 
 impl<T: FrameState> Frame for T {}
-
-unsafe extern "C-unwind" fn finalizer<T>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
-where
-    T: 'static,
-{
-    let ptr = unsafe { engine_touserdata(L, 1).cast::<T>() };
-    unsafe { std::ptr::drop_in_place(ptr) };
-    0
-}
