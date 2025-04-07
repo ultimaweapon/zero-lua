@@ -2,16 +2,17 @@ pub(crate) use self::state::*;
 pub use self::r#yield::*;
 
 use self::r#async::async_invoker;
+use self::function::invoker;
 use self::userdata::push_metatable;
 use crate::ffi::{
     ZL_REGISTRYINDEX, engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop,
-    engine_pushcclosure, engine_pushnil, engine_setfield, engine_touserdata, engine_upvalueindex,
-    lua_State, zl_load, zl_newmetatable, zl_pushlstring, zl_require_base, zl_require_coroutine,
-    zl_require_io, zl_require_math, zl_require_os, zl_setmetatable,
+    engine_pushcclosure, engine_pushnil, engine_setfield, engine_touserdata, lua_State, zl_load,
+    zl_newmetatable, zl_pushlstring, zl_require_base, zl_require_coroutine, zl_require_io,
+    zl_require_math, zl_require_os, zl_setmetatable,
 };
 use crate::{
-    Context, Error, Function, GlobalSetter, Nil, NonYieldable, Str, Table, TableFrame, TableGetter,
-    TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
+    Context, Error, Function, GlobalSetter, MainState, Nil, NonYieldable, Str, Table, TableFrame,
+    TableGetter, TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::{CStr, c_int};
@@ -20,6 +21,7 @@ use std::panic::RefUnwindSafe;
 use std::path::Path;
 
 mod r#async;
+mod function;
 mod state;
 mod userdata;
 mod r#yield;
@@ -28,43 +30,46 @@ mod r#yield;
 ///
 /// Most methods in this trait can raise a C++ exception. When calling outside Lua runtime it will
 /// cause the process to terminate the same as Rust panic. Inside Lua runtime it will report as Lua
-/// error. Usually you don't need to worry about this as long as you can return from a function
-/// without required a manual cleanup.
+/// error. Usually you don't need to worry about this as long as you can return from the current
+/// function without requires a manual cleanup.
 pub trait Frame: FrameState {
     /// Returns `true` if `T` was successfully registered or `false` if the other user data with the
     /// same name already registered.
-    fn register_ud<T: UserData>(&mut self) -> bool {
+    fn register_ud<T: UserData>(&mut self) -> bool
+    where
+        Self: FrameState<State = MainState>,
+    {
         // SAFETY: 2 is the maximum values we pushed here.
         unsafe { engine_checkstack(self.state().get(), 2) };
 
-        // Check if exists.
-        let ok = if unsafe { zl_newmetatable(self.state().get(), T::name().as_ptr()) != 0 } {
-            // Setup metatable.
-            T::setup_metatable(&mut ManuallyDrop::new(unsafe { Table::new(self) }));
+        if unsafe { zl_newmetatable(self.state().get(), T::name().as_ptr()) == 0 } {
+            unsafe { engine_pop(self.state().get(), 1) };
+            return false;
+        }
 
-            // Set "typeid".
-            let ud = unsafe { engine_newuserdatauv(self.state().get(), size_of::<TypeId>(), 0) };
+        T::setup_metatable(&mut ManuallyDrop::new(unsafe { Table::new(self) }));
 
-            unsafe { ud.cast::<TypeId>().write_unaligned(TypeId::of::<T>()) };
-            unsafe { engine_setfield(self.state().get(), -2, c"typeid".as_ptr()) };
+        // Set "typeid".
+        let ud = unsafe { engine_newuserdatauv(self.state().get(), size_of::<TypeId>(), 0) };
 
-            // Set finalizer.
-            if is_boxed::<T>() {
-                unsafe { engine_pushcclosure(self.state().get(), finalizer::<Box<T>>, 0) };
-                unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
-            } else if std::mem::needs_drop::<T>() {
-                unsafe { engine_pushcclosure(self.state().get(), finalizer::<T>, 0) };
-                unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
-            }
+        unsafe { ud.cast::<TypeId>().write_unaligned(TypeId::of::<T>()) };
+        unsafe { engine_setfield(self.state().get(), -2, c"typeid".as_ptr()) };
 
-            true
-        } else {
-            false
-        };
+        // Set finalizer.
+        if is_boxed::<T>() {
+            unsafe { engine_pushcclosure(self.state().get(), finalizer::<Box<T>>, 0) };
+            unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+        } else if std::mem::needs_drop::<T>() {
+            unsafe { engine_pushcclosure(self.state().get(), finalizer::<T>, 0) };
+            unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+        }
 
         unsafe { engine_pop(self.state().get(), 1) };
 
-        ok
+        // Add to global.
+        T::setup_global(GlobalSetter::new(self, T::name()));
+
+        true
     }
 
     fn require_base(&mut self, global: bool) -> Table<Self> {
@@ -294,25 +299,6 @@ pub trait Frame: FrameState {
 }
 
 impl<T: FrameState> Frame for T {}
-
-unsafe extern "C-unwind" fn invoker<F>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
-where
-    F: Fn(&mut Context<NonYieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
-{
-    let mut cx = unsafe { Context::new(NonYieldable::new(L)) };
-    let cb = if size_of::<F>() == 0 {
-        std::ptr::dangling::<F>()
-    } else {
-        let cb = unsafe { engine_upvalueindex(1) };
-
-        unsafe { engine_touserdata(L, cb).cast::<F>().cast_const() }
-    };
-
-    match unsafe { (*cb)(&mut cx) } {
-        Ok(_) => cx.into_results(),
-        Err(e) => cx.raise(e),
-    }
-}
 
 unsafe extern "C-unwind" fn finalizer<T>(#[allow(non_snake_case)] L: *mut lua_State) -> c_int
 where

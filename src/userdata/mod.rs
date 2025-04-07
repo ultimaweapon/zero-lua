@@ -1,6 +1,6 @@
 pub use self::value::*;
 
-use crate::{Frame, Table};
+use crate::{Frame, GlobalSetter, Table};
 use std::ffi::CStr;
 use std::panic::RefUnwindSafe;
 
@@ -15,6 +15,10 @@ pub trait UserData: RefUnwindSafe + 'static {
     /// Note that Zero Lua will overwrite the value of `typeid` and `__gc` after this.
     fn setup_metatable<P: Frame>(t: &mut Table<P>) {
         let _ = t;
+    }
+
+    fn setup_global<P: Frame>(g: GlobalSetter<P, &CStr>) {
+        let _ = g;
     }
 }
 

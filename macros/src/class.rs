@@ -1,9 +1,9 @@
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use std::ffi::CString;
-use syn::{Error, ImplItem, ItemImpl, LitCStr, Type};
+use syn::{AttrStyle, Error, ImplItem, ItemImpl, LitCStr, Type};
 
-pub fn transform(item: ItemImpl) -> syn::Result<TokenStream> {
+pub fn transform(mut item: ItemImpl) -> syn::Result<TokenStream> {
     // Check impl block.
     if let Some(v) = &item.defaultness {
         return Err(Error::new_spanned(
@@ -40,15 +40,40 @@ pub fn transform(item: ItemImpl) -> syn::Result<TokenStream> {
     };
 
     // Parse items.
-    let mut count = 0u16;
-    let mut setters = TokenStream::new();
+    let mut meta_len = 0u16;
+    let mut meta_set = TokenStream::new();
+    let mut glob_len = 0u16;
+    let mut glob_set = TokenStream::new();
 
-    for i in &item.items {
+    for i in &mut item.items {
         // Check if function.
         let f = match i {
             ImplItem::Fn(v) => v,
             i => return Err(Error::new_spanned(i, "unsupported item")),
         };
+
+        // Parse attributes.
+        let mut class = None;
+        let mut i = 0;
+
+        while i < f.attrs.len() {
+            // Skip inner.
+            let a = &f.attrs[i];
+
+            if !matches!(a.style, AttrStyle::Outer) {
+                i += 1;
+                continue;
+            }
+
+            // Check name.
+            if a.path().is_ident("class") {
+                f.attrs.remove(i);
+                class = Some(());
+                continue;
+            }
+
+            i += 1;
+        }
 
         // Get function name.
         let ident = &f.sig.ident;
@@ -56,11 +81,50 @@ pub fn transform(item: ItemImpl) -> syn::Result<TokenStream> {
         let name = CString::new(ident.to_string().replace('_', "")).unwrap();
         let name = LitCStr::new(&name, Span::call_site());
 
-        count += 1;
-        setters.extend(quote_spanned! {span=>
-            t.set(#name).push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx));
-        });
+        match class {
+            Some(_) => {
+                glob_len += 1;
+                glob_set.extend(quote_spanned! {span=>
+                    t.set(#name).push_fn(Self::#ident);
+                });
+            }
+            None => {
+                meta_len += 1;
+                meta_set.extend(quote_spanned! {span=>
+                    t.set(#name).push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx));
+                });
+            }
+        }
     }
+
+    // Generate setup_metatable.
+    let meta = match meta_len {
+        0 => TokenStream::new(),
+        n => quote! {
+            fn setup_metatable<P: ::zl::Frame>(t: &mut ::zl::Table<P>) {
+                use ::zl::Frame;
+
+                let mut s = t.set(c"__index");
+                let mut t = s.push_table(0, #n);
+
+                #meta_set
+            }
+        },
+    };
+
+    // Generate setup_global.
+    let glob = match glob_len {
+        0 => TokenStream::new(),
+        n => quote! {
+            fn setup_global<P: ::zl::Frame>(mut g: ::zl::GlobalSetter<P, &::core::ffi::CStr>) {
+                use ::zl::Frame;
+
+                let mut t = g.push_table(0, #n);
+
+                #glob_set
+            }
+        },
+    };
 
     // Compose.
     let ident = ty.path.require_ident()?;
@@ -75,14 +139,8 @@ pub fn transform(item: ItemImpl) -> syn::Result<TokenStream> {
                 #name
             }
 
-            fn setup_metatable<P: ::zl::Frame>(t: &mut ::zl::Table<P>) {
-                use ::zl::Frame;
-
-                let mut s = t.set(c"__index");
-                let mut t = s.push_table(0, #count);
-
-                #setters
-            }
+            #meta
+            #glob
         }
     })
 }
