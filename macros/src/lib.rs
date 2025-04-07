@@ -5,10 +5,14 @@ mod class;
 mod derive;
 
 #[proc_macro_attribute]
-pub fn class(_: TokenStream, item: TokenStream) -> TokenStream {
+pub fn class(arg: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as ItemImpl);
+    let mut opts = self::class::Options::default();
+    let parser = syn::meta::parser(|m| opts.parse(m));
 
-    self::class::transform(item)
+    parse_macro_input!(arg with parser);
+
+    self::class::transform(item, opts)
         .unwrap_or_else(Error::into_compile_error)
         .into()
 }

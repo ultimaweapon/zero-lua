@@ -1,9 +1,10 @@
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use std::ffi::CString;
+use syn::meta::ParseNestedMeta;
 use syn::{AttrStyle, Error, ImplItem, ItemImpl, LitCStr, Type};
 
-pub fn transform(mut item: ItemImpl) -> syn::Result<TokenStream> {
+pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> {
     // Check impl block.
     if let Some(v) = &item.defaultness {
         return Err(Error::new_spanned(
@@ -67,6 +68,13 @@ pub fn transform(mut item: ItemImpl) -> syn::Result<TokenStream> {
 
             // Check name.
             if a.path().is_ident("class") {
+                if !opts.global {
+                    return Err(Error::new_spanned(
+                        a,
+                        "class method on non-global class is not supported",
+                    ));
+                }
+
                 f.attrs.remove(i);
                 class = Some(());
                 continue;
@@ -126,21 +134,52 @@ pub fn transform(mut item: ItemImpl) -> syn::Result<TokenStream> {
         },
     };
 
-    // Compose.
+    // Generate name.
     let ident = ty.path.require_ident()?;
-    let name = CString::new(ident.to_string()).unwrap();
-    let name = LitCStr::new(&name, Span::call_site());
+    let name = match opts.global {
+        true => {
+            let name = CString::new(ident.to_string()).unwrap();
+            let name = LitCStr::new(&name, Span::call_site());
 
+            quote! {
+                fn name() -> &'static ::core::ffi::CStr {
+                    #name
+                }
+            }
+        }
+        false => quote! {
+            fn name() -> &'static ::core::ffi::CStr {
+                static NAME: ::std::sync::LazyLock<::std::ffi::CString> = ::std::sync::LazyLock::new(|| ::std::ffi::CString::new(::std::any::type_name::<#ident>()).unwrap());
+                NAME.as_c_str()
+            }
+        },
+    };
+
+    // Compose.
     Ok(quote! {
         #item
 
         impl ::zl::UserData for #ident {
-            fn name() -> &'static ::core::ffi::CStr {
-                #name
-            }
-
+            #name
             #meta
             #glob
         }
     })
+}
+
+#[derive(Default)]
+pub struct Options {
+    global: bool,
+}
+
+impl Options {
+    pub fn parse(&mut self, m: ParseNestedMeta) -> syn::Result<()> {
+        if m.path.is_ident("global") {
+            self.global = true;
+        } else {
+            return Err(m.error("unknown option"));
+        }
+
+        Ok(())
+    }
 }
