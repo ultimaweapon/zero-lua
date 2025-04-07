@@ -14,7 +14,9 @@ static_assert(std::is_signed<lua_Integer>::value);
 static_assert(sizeof(lua_KContext) == sizeof(intptr_t));
 static_assert(LUA_EXTRASPACE == sizeof(void *));
 
-extern "C" int ZL_REGISTRYINDEX = LUA_REGISTRYINDEX;
+extern "C" {
+    int ZL_REGISTRYINDEX = LUA_REGISTRYINDEX;
+}
 
 extern "C" lua_State *lua54_newstate()
 {
@@ -33,7 +35,6 @@ extern "C" lua_State *lua54_newstate()
     auto libs = {
         std::make_pair(LUA_TABLIBNAME, luaopen_table),
         std::make_pair(LUA_STRLIBNAME, luaopen_string),
-        std::make_pair(LUA_MATHLIBNAME, luaopen_math),
         std::make_pair(LUA_UTF8LIBNAME, luaopen_utf8)
     };
 
@@ -63,6 +64,11 @@ extern "C" void zl_require_coroutine(lua_State *L, bool global)
 extern "C" void zl_require_io(lua_State *L, bool global)
 {
     luaL_requiref(L, LUA_IOLIBNAME, luaopen_io, global);
+}
+
+extern "C" void zl_require_math(lua_State *L, bool global)
+{
+    luaL_requiref(L, LUA_MATHLIBNAME, luaopen_math, global);
 }
 
 extern "C" void zl_require_os(lua_State *L, bool global)

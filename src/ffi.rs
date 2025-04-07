@@ -18,6 +18,7 @@ unsafe extern "C-unwind" {
     pub fn zl_require_base(L: *mut lua_State, global: bool);
     pub fn zl_require_coroutine(L: *mut lua_State, global: bool);
     pub fn zl_require_io(L: *mut lua_State, global: bool);
+    pub fn zl_require_math(L: *mut lua_State, global: bool);
     pub fn zl_require_os(L: *mut lua_State, global: bool);
     pub fn zl_load(
         L: *mut lua_State,
