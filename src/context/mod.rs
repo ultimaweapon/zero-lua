@@ -14,7 +14,7 @@ mod state;
 /// Encapsulates a `lua_State` passed to `lua_CFunction`.
 ///
 /// All values pushed directly to this struct will become function results.
-pub struct Context<'a, S> {
+pub struct Context<'a, S = NonYieldable> {
     state: S,
     args: c_int,
     ret: c_int,
