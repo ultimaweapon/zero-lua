@@ -4,7 +4,6 @@
 
 #include <new>
 #include <type_traits>
-#include <utility>
 
 #include <stdint.h>
 #include <string.h>
@@ -30,16 +29,6 @@ extern "C" lua_State *lua54_newstate()
     // Lua does not mention about the initial content of extra space and it seems like Lua does not
     // zeroed this area.
     memset(lua_getextraspace(L), 0, LUA_EXTRASPACE);
-
-    // Register libraries that does not need to alter its behavior.
-    auto libs = {
-        std::make_pair(LUA_UTF8LIBNAME, luaopen_utf8)
-    };
-
-    for (auto &l : libs) {
-        luaL_requiref(L, l.first, l.second, 1);
-        lua_pop(L, 1);
-    }
 
     return L;
 }
@@ -82,6 +71,11 @@ extern "C" void zl_require_string(lua_State *L, bool global)
 extern "C" void zl_require_table(lua_State *L, bool global)
 {
     luaL_requiref(L, LUA_TABLIBNAME, luaopen_table, global);
+}
+
+extern "C" void zl_require_utf8(lua_State *L, bool global)
+{
+    luaL_requiref(L, LUA_UTF8LIBNAME, luaopen_utf8, global);
 }
 
 extern "C" bool zl_load(lua_State *L, const char *name, const char *chunk, size_t len)

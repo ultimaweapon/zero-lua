@@ -22,6 +22,7 @@ unsafe extern "C-unwind" {
     pub fn zl_require_os(L: *mut lua_State, global: bool);
     pub fn zl_require_string(L: *mut lua_State, global: bool);
     pub fn zl_require_table(L: *mut lua_State, global: bool);
+    pub fn zl_require_utf8(L: *mut lua_State, global: bool);
     pub fn zl_load(
         L: *mut lua_State,
         name: *const c_char,
