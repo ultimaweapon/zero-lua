@@ -41,10 +41,11 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
     };
 
     // Parse items.
-    let mut meta_len = 0u16;
-    let mut meta_set = TokenStream::new();
+    let mut metd_len = 0u16;
+    let mut metd_set = TokenStream::new();
     let mut glob_len = 0u16;
     let mut glob_set = TokenStream::new();
+    let mut close = TokenStream::new();
 
     for i in &mut item.items {
         // Check if function.
@@ -54,7 +55,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
         };
 
         // Parse attributes.
-        let mut class = None;
+        let mut ty = FnType::Method;
         let mut i = 0;
 
         while i < f.attrs.len() {
@@ -75,12 +76,23 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
                     ));
                 }
 
-                f.attrs.remove(i);
-                class = Some(());
+                ty = FnType::ClassMethod;
+            } else if a.path().is_ident("close") {
+                if !close.is_empty() {
+                    return Err(Error::new_spanned(
+                        a,
+                        "multiple close method is not supported",
+                    ));
+                }
+
+                ty = FnType::Close;
+            } else {
+                i += 1;
                 continue;
             }
 
-            i += 1;
+            f.attrs.remove(i);
+            break;
         }
 
         // Get function name.
@@ -89,36 +101,40 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
         let name = CString::new(ident.to_string().replace('_', "")).unwrap();
         let name = LitCStr::new(&name, Span::call_site());
 
-        match class {
-            Some(_) => {
+        match ty {
+            FnType::Method => {
+                metd_len += 1;
+                metd_set.extend(quote_spanned! {span=>
+                    t.set(#name).push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx));
+                });
+            }
+            FnType::ClassMethod => {
                 glob_len += 1;
                 glob_set.extend(quote_spanned! {span=>
                     t.set(#name).push_fn(Self::#ident);
                 });
             }
-            None => {
-                meta_len += 1;
-                meta_set.extend(quote_spanned! {span=>
-                    t.set(#name).push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx));
-                });
+            FnType::Close => {
+                close = quote! {
+                    t.set(c"__close").push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx));
+                }
             }
         }
     }
 
     // Generate setup_metatable.
-    let meta = match meta_len {
-        0 => TokenStream::new(),
-        n => quote! {
-            fn setup_metatable<P: ::zl::Frame>(t: &mut ::zl::Table<P>) {
-                use ::zl::Frame;
+    let mut meta = TokenStream::new();
 
-                let mut s = t.set(c"__index");
-                let mut t = s.push_table(0, #n);
+    meta.extend(close);
 
-                #meta_set
-            }
-        },
-    };
+    if metd_len != 0 {
+        meta.extend(quote! {
+            let mut s = t.set(c"__index");
+            let mut t = s.push_table(0, #metd_len);
+
+            #metd_set
+        });
+    }
 
     // Generate setup_global.
     let glob = match glob_len {
@@ -156,6 +172,15 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
     };
 
     // Compose.
+    if !meta.is_empty() {
+        meta = quote! {
+            fn setup_metatable<P: ::zl::Frame>(t: &mut ::zl::Table<P>) {
+                use ::zl::Frame;
+                #meta
+            }
+        }
+    }
+
     Ok(quote! {
         #item
 
@@ -182,4 +207,10 @@ impl Options {
 
         Ok(())
     }
+}
+
+enum FnType {
+    Method,
+    ClassMethod,
+    Close,
 }
