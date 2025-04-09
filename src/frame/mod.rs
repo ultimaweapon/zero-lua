@@ -321,7 +321,7 @@ pub trait Frame: FrameState {
         unsafe { Function::new(self) }
     }
 
-    fn begin_yield(&mut self) -> Yield<Self>
+    fn as_yield(&mut self) -> Yield<Self>
     where
         Self: FrameState<State = Yieldable>,
     {
