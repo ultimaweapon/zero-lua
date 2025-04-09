@@ -36,7 +36,8 @@ impl<'a, P> Function<'a, P>
 where
     P: Frame<State = MainState>,
 {
-    /// This will consume the callable object so it will not pushed to parent frame.
+    /// This will consume the callable object so it will not pushed to the parent frame when
+    /// dropped.
     #[inline(always)]
     pub fn call(mut self) -> Result<Ret<'a, P>, Str<'a, P>> {
         // Call.
@@ -57,7 +58,8 @@ impl<'a, P> Function<'a, P>
 where
     P: Frame<State = AsyncState>,
 {
-    /// This will consume the callable object so it will not pushed to parent frame.
+    /// This will consume the callable object so it will not pushed to the parent frame when
+    /// dropped.
     #[inline(always)]
     pub fn into_async(mut self) -> AsyncCall<'a, P> {
         unsafe { AsyncCall::new(self.parent.take().unwrap(), self.args) }

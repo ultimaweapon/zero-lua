@@ -99,5 +99,5 @@ impl<'a, P: Frame> Value<'a, P> {
     }
 }
 
-#[cfg(not(panic = "unwind"))]
+#[cfg(all(not(feature = "no-panic-check"), not(panic = "unwind")))]
 compile_error!("Zero Lua can only be used with unwinding panic.");
