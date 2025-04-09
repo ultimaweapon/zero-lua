@@ -3,9 +3,6 @@ name = "zl"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-no-panic-check = []
-
 [dependencies]
 cpplink = { path = "cpplink" }
 zl-macros = { path = "macros" }
