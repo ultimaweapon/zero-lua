@@ -13,10 +13,14 @@ mod state;
 pub struct Lua(MainState);
 
 impl Lua {
-    /// This function use `luaL_newstate` to create a `lua_State`.
+    /// Create a new `lua_State` using `luaL_newstate`. Returns [`None`] if `luaL_newstate` return
+    /// null.
+    ///
+    /// You may want to change Lua panic and warning function after this if your application is a
+    /// GUI application.
     #[inline(always)]
-    pub fn new() -> Self {
-        Self(MainState::new())
+    pub fn new() -> Option<Self> {
+        MainState::new().map(Self)
     }
 
     pub fn into_async(self) -> Pin<Rc<AsyncLua>> {

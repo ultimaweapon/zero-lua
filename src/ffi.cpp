@@ -2,7 +2,6 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
-#include <new>
 #include <type_traits>
 
 #include <stdint.h>
@@ -17,13 +16,13 @@ extern "C" {
     int ZL_REGISTRYINDEX = LUA_REGISTRYINDEX;
 }
 
-extern "C" lua_State *lua54_newstate()
+extern "C" lua_State *zl_newstate()
 {
     // Create Lua state.
     auto L = luaL_newstate();
 
     if (!L) {
-        throw std::bad_alloc();
+        return nullptr;
     }
 
     // Lua does not mention about the initial content of extra space and it seems like Lua does not

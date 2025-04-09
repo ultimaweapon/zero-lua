@@ -1,4 +1,4 @@
-use crate::ffi::{lua54_newstate, zl_close};
+use crate::ffi::{zl_close, zl_newstate};
 use crate::state::State;
 use std::ops::Deref;
 
@@ -7,8 +7,14 @@ pub struct MainState(State);
 
 impl MainState {
     #[inline(always)]
-    pub(super) fn new() -> Self {
-        Self(State::new(lua54_newstate()))
+    pub(super) fn new() -> Option<Self> {
+        let state = zl_newstate();
+
+        if state.is_null() {
+            None
+        } else {
+            Some(Self(State::new(state)))
+        }
     }
 }
 

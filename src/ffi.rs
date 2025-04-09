@@ -13,7 +13,7 @@ pub struct lua_State([u8; 0]);
 unsafe extern "C-unwind" {
     pub static ZL_REGISTRYINDEX: c_int;
 
-    pub safe fn lua54_newstate() -> *mut lua_State;
+    pub safe fn zl_newstate() -> *mut lua_State;
     pub fn zl_close(L: *mut lua_State);
     pub fn zl_require_base(L: *mut lua_State, global: bool);
     pub fn zl_require_coroutine(L: *mut lua_State, global: bool);
