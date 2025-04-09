@@ -97,6 +97,11 @@ extern "C" void engine_pushnil(lua_State *L)
     lua_pushnil(L);
 }
 
+extern "C" void zl_pushboolean(lua_State *L, bool b)
+{
+    lua_pushboolean(L, b);
+}
+
 extern "C" const char *zl_pushlstring(lua_State *L, const char *s, size_t len)
 {
     return lua_pushlstring(L, s, len);

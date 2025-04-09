@@ -1,3 +1,4 @@
+pub use self::boolean::*;
 pub use self::context::*;
 pub use self::error::*;
 pub use self::frame::*;
@@ -18,6 +19,7 @@ use std::ffi::{CStr, c_int};
 use std::mem::transmute;
 use std::ptr::null_mut;
 
+mod boolean;
 mod context;
 mod error;
 mod ffi;
@@ -40,6 +42,7 @@ extern crate zl_sys; // Required since no Rust code references this crate.
 #[repr(i32)]
 pub enum Value<'a, P: Frame> {
     Nil(Nil<'a, P>) = 0,
+    Boolean(Bool<'a, P>) = 1,
     String(Str<'a, P>) = 4,
     Table(Table<'a, P>) = 5,
     Function(Function<'a, P>) = 6,
@@ -87,7 +90,7 @@ impl<'a, P: Frame> Value<'a, P> {
         match unsafe { k.get_value(p.state().get(), t) } {
             Type::None => unreachable!(),
             Type::Nil => Self::Nil(unsafe { Nil::new(p) }),
-            Type::Boolean => todo!(),
+            Type::Boolean => Self::Boolean(unsafe { Bool::new(p) }),
             Type::LightUserData => todo!(),
             Type::Number => todo!(),
             Type::String => Self::String(unsafe { Str::new(p) }),

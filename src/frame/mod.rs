@@ -6,13 +6,13 @@ use self::function::invoker;
 use self::userdata::{finalizer, push_metatable};
 use crate::ffi::{
     ZL_REGISTRYINDEX, engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop,
-    engine_pushcclosure, engine_pushnil, engine_setfield, zl_load, zl_newmetatable, zl_pushlstring,
-    zl_require_base, zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os,
-    zl_require_string, zl_require_table, zl_require_utf8, zl_setmetatable,
+    engine_pushcclosure, engine_pushnil, engine_setfield, zl_load, zl_newmetatable, zl_pushboolean,
+    zl_pushlstring, zl_require_base, zl_require_coroutine, zl_require_io, zl_require_math,
+    zl_require_os, zl_require_string, zl_require_table, zl_require_utf8, zl_setmetatable,
 };
 use crate::{
-    Context, Error, Function, GlobalSetter, MainState, Nil, NonYieldable, Str, Table, TableFrame,
-    TableGetter, TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
+    Bool, Context, Error, Function, GlobalSetter, MainState, Nil, NonYieldable, Str, Table,
+    TableFrame, TableGetter, TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::CStr;
@@ -186,11 +186,18 @@ pub trait Frame: FrameState {
         unsafe { Nil::new(self) }
     }
 
-    fn push_str(&mut self, s: impl AsRef<[u8]>) -> Str<Self> {
-        let s = s.as_ref();
+    fn push_bool(&mut self, v: bool) -> Bool<Self> {
+        unsafe { engine_checkstack(self.state().get(), 1) };
+        unsafe { zl_pushboolean(self.state().get(), v) };
+
+        unsafe { Bool::new(self) }
+    }
+
+    fn push_str(&mut self, v: impl AsRef<[u8]>) -> Str<Self> {
+        let v = v.as_ref();
 
         unsafe { engine_checkstack(self.state().get(), 1) };
-        unsafe { zl_pushlstring(self.state().get(), s.as_ptr().cast(), s.len()) };
+        unsafe { zl_pushlstring(self.state().get(), v.as_ptr().cast(), v.len()) };
 
         unsafe { Str::new(self) }
     }
