@@ -28,8 +28,8 @@ impl FrameState for Lua {
     type State = MainState;
 
     #[inline(always)]
-    fn state(&self) -> &Self::State {
-        &self.0
+    fn state(&mut self) -> &mut Self::State {
+        &mut self.0
     }
 
     #[inline(always)]

@@ -84,8 +84,8 @@ impl<'a, P: Frame> FrameState for Function<'a, P> {
     type State = P::State;
 
     #[inline(always)]
-    fn state(&self) -> &Self::State {
-        self.parent.as_ref().unwrap().state()
+    fn state(&mut self) -> &mut Self::State {
+        self.parent.as_mut().unwrap().state()
     }
 
     #[inline(always)]

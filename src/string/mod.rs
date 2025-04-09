@@ -20,27 +20,27 @@ impl<'a, P: Frame> Str<'a, P> {
     ///
     /// Note that the slice may contains NUL.
     #[inline(always)]
-    pub fn to_bytes(&self) -> &[u8] {
+    pub fn to_bytes(&mut self) -> &[u8] {
         let mut len = 0;
         let ptr = unsafe { zl_tolstring(self.0.state().get(), -1, &mut len) };
 
         unsafe { std::slice::from_raw_parts(ptr.cast(), len) }
     }
 
-    pub fn to_option<T: FromOption>(&self) -> Result<T, OptionError> {
+    pub fn to_option<T: FromOption>(&mut self) -> Result<T, OptionError> {
         let v = self.to_bytes();
 
         T::from_option(v).ok_or_else(|| OptionError::new(v))
     }
 
     #[inline(always)]
-    pub fn to_c_str(&self) -> &CStr {
+    pub fn to_c_str(&mut self) -> &CStr {
         unsafe { CStr::from_ptr(zl_tolstring(self.0.state().get(), -1, null_mut())) }
     }
 
     /// Invoke [`std::str::from_utf8()`] with the result of [`Self::to_bytes()`].
     #[inline(always)]
-    pub fn to_str(&self) -> Result<&str, Utf8Error> {
+    pub fn to_str(&mut self) -> Result<&str, Utf8Error> {
         std::str::from_utf8(self.to_bytes())
     }
 }

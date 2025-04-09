@@ -1,8 +1,10 @@
 use super::{Frame, FrameState};
 use crate::ffi::engine_pop;
 use crate::{Ret, YieldValues, Yieldable};
+use std::cell::Cell;
 use std::ffi::c_int;
 use std::future::poll_fn;
+use std::ops::Deref;
 use std::task::Poll;
 
 /// Provides method to yield from Lua thread.
@@ -26,13 +28,12 @@ where
     pub async fn yield_now(mut self) -> Ret<'a, P> {
         // Set values to yield.
         let parent = self.parent.take().unwrap();
-        let values = Yieldable::values(parent.state());
+        let values = ValuesGuard(parent.state());
 
         values.set(YieldValues::FromThread(std::mem::take(&mut self.values)));
 
         // Setup future for return values.
-        let guard = ValuesGuard(parent.state());
-        let f = poll_fn(|_| match values.get() {
+        let f = poll_fn(move |_| match values.get() {
             YieldValues::None => unreachable!(),
             YieldValues::FromThread(_) => Poll::Pending,
             YieldValues::ToThread(v) => {
@@ -43,8 +44,6 @@ where
 
         // Wait for return values.
         let n = f.await;
-
-        drop(guard);
 
         unsafe { Ret::new(parent, n) }
     }
@@ -63,8 +62,8 @@ impl<'a, P: Frame> FrameState for Yield<'a, P> {
     type State = P::State;
 
     #[inline(always)]
-    fn state(&self) -> &Self::State {
-        self.parent.as_ref().unwrap().state()
+    fn state(&mut self) -> &mut Self::State {
+        self.parent.as_mut().unwrap().state()
     }
 
     #[inline(always)]
@@ -74,7 +73,7 @@ impl<'a, P: Frame> FrameState for Yield<'a, P> {
 }
 
 /// RAII struct to remove yield values.
-struct ValuesGuard<'a>(&'a Yieldable);
+struct ValuesGuard<'a>(&'a mut Yieldable);
 
 impl<'a> Drop for ValuesGuard<'a> {
     #[inline(always)]
@@ -88,5 +87,14 @@ impl<'a> Drop for ValuesGuard<'a> {
         if n != 0 {
             unsafe { engine_pop(self.0.get(), n) };
         }
+    }
+}
+
+impl<'a> Deref for ValuesGuard<'a> {
+    type Target = Cell<YieldValues>;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        Yieldable::values(self.0)
     }
 }

@@ -6,7 +6,7 @@ use std::ops::Deref;
 pub trait FrameState: Sized {
     type State: Deref<Target = State>;
 
-    fn state(&self) -> &Self::State;
+    fn state(&mut self) -> &mut Self::State;
 
     /// # Safety
     /// `n` must be greater than zero and `n` values on the top of stack must be owned by the

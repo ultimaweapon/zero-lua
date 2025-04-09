@@ -29,7 +29,7 @@ impl<'a, P: Frame> FrameState for BorrowedTable<'a, P> {
     type State = P::State;
 
     #[inline(always)]
-    fn state(&self) -> &Self::State {
+    fn state(&mut self) -> &mut Self::State {
         self.parent.state()
     }
 

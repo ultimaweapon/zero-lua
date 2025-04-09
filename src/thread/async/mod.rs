@@ -53,8 +53,8 @@ impl FrameState for AsyncThread {
     type State = AsyncState;
 
     #[inline(always)]
-    fn state(&self) -> &Self::State {
-        &self.state
+    fn state(&mut self) -> &mut Self::State {
+        &mut self.state
     }
 
     #[inline(always)]

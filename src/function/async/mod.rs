@@ -82,7 +82,7 @@ impl<'a, P: Frame> FrameState for AsyncCall<'a, P> {
     type State = P::State;
 
     #[inline(always)]
-    fn state(&self) -> &Self::State {
+    fn state(&mut self) -> &mut Self::State {
         self.result.state()
     }
 

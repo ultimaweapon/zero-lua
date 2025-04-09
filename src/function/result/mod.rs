@@ -26,7 +26,7 @@ impl<'a, P: Frame> Ret<'a, P> {
     /// # Panics
     /// If `n` is less than 1 or geater than [len](Self::len()).
     #[inline(always)]
-    pub fn to_nil(&self, n: c_int) -> Option<()> {
+    pub fn to_nil(&mut self, n: c_int) -> Option<()> {
         unsafe { engine_isnil(self.parent.state().get(), self.index(n)).then_some(()) }
     }
 
@@ -35,7 +35,7 @@ impl<'a, P: Frame> Ret<'a, P> {
     /// # Panics
     /// If `n` is less than 1 or geater than [len](Self::len()).
     #[inline(always)]
-    pub fn to_int(&self, n: c_int) -> Option<i64> {
+    pub fn to_int(&mut self, n: c_int) -> Option<i64> {
         let mut ok = 0;
         let val = unsafe { engine_tointegerx(self.parent.state().get(), self.index(n), &mut ok) };
 
@@ -47,7 +47,7 @@ impl<'a, P: Frame> Ret<'a, P> {
     /// # Panics
     /// If `n` is less than 1 or geater than [len](Self::len()).
     #[inline(always)]
-    pub fn to_type(&self, n: c_int) -> Type {
+    pub fn to_type(&mut self, n: c_int) -> Type {
         unsafe { lua54_type(self.parent.state().get(), self.index(n)) }
     }
 

@@ -229,8 +229,8 @@ impl<'a, S: LocalState> FrameState for Context<'a, S> {
     type State = S;
 
     #[inline(always)]
-    fn state(&self) -> &Self::State {
-        &self.state
+    fn state(&mut self) -> &mut Self::State {
+        &mut self.state
     }
 
     #[inline(always)]

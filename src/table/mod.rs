@@ -37,7 +37,7 @@ impl<'a, P: Frame> Drop for Table<'a, P> {
 impl<'a, P: Frame> FrameState for Table<'a, P> {
     type State = P::State;
 
-    fn state(&self) -> &Self::State {
+    fn state(&mut self) -> &mut Self::State {
         self.0.state()
     }
 
