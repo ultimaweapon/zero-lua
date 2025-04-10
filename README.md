@@ -7,6 +7,12 @@ Zero Lua use a virtual frame to achieve memory safety with zero cost. Each frame
 > [!IMPORTANT]
 > Zero Lua can only be used with unwinding panic. You will get a compile error if you use abort-on-panic.
 
+## Features
+
+- Direct access to Lua stack with zero cost.
+- Async support with ability to yield values between Lua.
+- Work with any async executor.
+
 ## Development
 
 ### Generate compile_commands.json (Linux and macOS)

@@ -2,11 +2,11 @@ use crate::YieldValues;
 use crate::ffi::lua_State;
 use crate::state::State;
 use std::cell::Cell;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 /// Encapsulates [`State`] passed to `lua_CFunction`.
-pub trait LocalState: Deref<Target = State> {}
+pub trait LocalState: DerefMut<Target = State> {}
 
 /// Encapsulates [`State`] passed to `lua_CFunction` for non-yieldable function.
 pub struct NonYieldable(State);
@@ -24,6 +24,13 @@ impl Deref for NonYieldable {
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for NonYieldable {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -56,6 +63,13 @@ impl Deref for Yieldable {
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
         &self.state
+    }
+}
+
+impl DerefMut for Yieldable {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.state
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::ffi::lua_State;
 use crate::state::State;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 /// Encapsulates a [`State`] that can call into async function.
 pub struct AsyncState(State);
@@ -17,5 +17,12 @@ impl Deref for AsyncState {
     #[inline(always)]
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for AsyncState {
+    #[inline(always)]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }

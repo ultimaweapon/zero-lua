@@ -1,10 +1,10 @@
 use crate::state::State;
 use std::ffi::c_int;
-use std::ops::Deref;
+use std::ops::DerefMut;
 
 /// Provides method to get `lua_State` for a frame.
 pub trait FrameState: Sized {
-    type State: Deref<Target = State>;
+    type State: DerefMut<Target = State>;
 
     fn state(&mut self) -> &mut Self::State;
 
