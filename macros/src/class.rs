@@ -41,11 +41,10 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
     };
 
     // Parse items.
-    let mut metd_len = 0u16;
-    let mut metd_set = TokenStream::new();
     let mut glob_len = 0u16;
     let mut glob_set = TokenStream::new();
     let mut close = TokenStream::new();
+    let mut index = TokenStream::new();
 
     for i in &mut item.items {
         // Check if function.
@@ -86,6 +85,8 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
                 }
 
                 ty = FnType::Close;
+            } else if a.path().is_ident("prop") {
+                ty = FnType::Property;
             } else {
                 i += 1;
                 continue;
@@ -98,17 +99,19 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
         // Get function name.
         let ident = &f.sig.ident;
         let span = Span::call_site();
-        let name = CString::new(ident.to_string().replace('_', "")).unwrap();
-        let name = LitCStr::new(&name, Span::call_site());
+        let name = ident.to_string().replace('_', "");
 
         match ty {
-            FnType::Method => {
-                metd_len += 1;
-                metd_set.extend(quote_spanned! {span=>
-                    t.set(#name).push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx));
-                });
-            }
+            FnType::Method => index.extend(quote_spanned! {span=>
+                #name => drop(cx.push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx))),
+            }),
+            FnType::Property => index.extend(quote_spanned! {span=>
+                #name => return v.#ident(cx),
+            }),
             FnType::ClassMethod => {
+                let name = CString::new(name).unwrap();
+                let name = LitCStr::new(&name, Span::call_site());
+
                 glob_len += 1;
                 glob_set.extend(quote_spanned! {span=>
                     t.set(#name).push_fn(Self::#ident);
@@ -127,12 +130,19 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
 
     meta.extend(close);
 
-    if metd_len != 0 {
+    if !index.is_empty() {
         meta.extend(quote! {
-            let mut s = t.set(c"__index");
-            let mut t = s.push_table(0, #metd_len);
+            t.set(c"__index").push_fn(|cx| {
+                let v = cx.to_ud::<Self>(1);
+                let n = cx.to_str(2);
 
-            #metd_set
+                match n {
+                    #index
+                    _ => drop(cx.push_nil()),
+                }
+
+                Ok(())
+            });
         });
     }
 
@@ -211,6 +221,7 @@ impl Options {
 
 enum FnType {
     Method,
+    Property,
     ClassMethod,
     Close,
 }
