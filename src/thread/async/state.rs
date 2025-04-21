@@ -6,6 +6,7 @@ use std::ops::{Deref, DerefMut};
 pub struct AsyncState(State);
 
 impl AsyncState {
+    #[inline(always)]
     pub(super) unsafe fn new(s: *mut lua_State) -> Self {
         Self(State::new(s))
     }

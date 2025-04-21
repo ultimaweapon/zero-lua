@@ -2,7 +2,7 @@ pub(crate) use self::state::*;
 
 use super::AsyncLua;
 use crate::FrameState;
-use crate::ffi::engine_pop;
+use crate::ffi::zl_pop;
 use std::ffi::c_int;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -38,6 +38,6 @@ impl FrameState for Lua {
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { engine_pop(self.0.get(), n) };
+        unsafe { zl_pop(self.0.get(), n) };
     }
 }

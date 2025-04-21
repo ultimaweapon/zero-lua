@@ -1,5 +1,5 @@
 use super::TableGetter;
-use crate::ffi::engine_pop;
+use crate::ffi::zl_pop;
 use crate::{Frame, FrameState, Value};
 use std::ffi::c_int;
 
@@ -35,6 +35,6 @@ impl<'a, P: Frame> FrameState for BorrowedTable<'a, P> {
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { engine_pop(self.state().get(), n) };
+        unsafe { zl_pop(self.state().get(), n) };
     }
 }

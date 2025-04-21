@@ -1,4 +1,4 @@
-use crate::ffi::lua54_typename;
+use crate::ffi::zl_typename;
 use std::ffi::CStr;
 use std::fmt::{Display, Formatter};
 use std::ptr::null_mut;
@@ -23,7 +23,7 @@ impl Type {
     #[inline(always)]
     pub fn name(self) -> &'static CStr {
         // SAFETY: Lua does not use L.
-        unsafe { CStr::from_ptr(lua54_typename(null_mut(), self)) }
+        unsafe { CStr::from_ptr(zl_typename(null_mut(), self)) }
     }
 }
 

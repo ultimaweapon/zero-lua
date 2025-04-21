@@ -13,7 +13,7 @@ pub use self::ty::*;
 pub use self::userdata::*;
 pub use zl_macros::*;
 
-use self::ffi::{engine_checkstack, engine_pop, zl_getmetafield, zl_tolstring};
+use self::ffi::{zl_getmetafield, zl_pop, zl_tolstring};
 use std::borrow::Cow;
 use std::ffi::{CStr, c_int};
 use std::mem::transmute;
@@ -65,8 +65,6 @@ impl<'a, P: Frame> Value<'a, P> {
 
         // SAFETY: We have an exclusive access to the value, which mean top of the stack always be a
         // value.
-        unsafe { engine_checkstack(state.get(), 1) };
-
         match unsafe { zl_getmetafield(state.get(), -1, c"__name".as_ptr()) } {
             Type::None => unreachable!(),
             Type::Nil => (), // luaL_getmetafield push nothing.
@@ -74,19 +72,17 @@ impl<'a, P: Frame> Value<'a, P> {
                 let v = zl_tolstring(state.get(), -1, null_mut());
                 let v = CStr::from_ptr(v).to_owned();
 
-                engine_pop(state.get(), 1);
+                zl_pop(state.get(), 1);
 
                 return v.into();
             },
-            _ => unsafe { engine_pop(state.get(), 1) },
+            _ => unsafe { zl_pop(state.get(), 1) },
         }
 
         Cow::Borrowed(self.ty().name())
     }
 
     pub(crate) unsafe fn from_table<K: TableGetter>(p: &'a mut P, t: c_int, k: K) -> Self {
-        unsafe { engine_checkstack(p.state().get(), 1) };
-
         match unsafe { k.get_value(p.state().get(), t) } {
             Type::None => unreachable!(),
             Type::Nil => Self::Nil(unsafe { Nil::new(p) }),

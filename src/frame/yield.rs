@@ -1,5 +1,5 @@
 use super::{Frame, FrameState};
-use crate::ffi::engine_pop;
+use crate::ffi::zl_pop;
 use crate::{Ret, YieldValues, Yieldable};
 use std::cell::Cell;
 use std::ffi::c_int;
@@ -53,7 +53,7 @@ impl<'a, P: Frame> Drop for Yield<'a, P> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.values != 0 {
-            unsafe { engine_pop(self.state().get(), self.values) };
+            unsafe { zl_pop(self.state().get(), self.values) };
         }
     }
 }
@@ -85,7 +85,7 @@ impl<'a> Drop for ValuesGuard<'a> {
         };
 
         if n != 0 {
-            unsafe { engine_pop(self.0.get(), n) };
+            unsafe { zl_pop(self.0.get(), n) };
         }
     }
 }

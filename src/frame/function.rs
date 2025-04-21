@@ -1,4 +1,4 @@
-use crate::ffi::{engine_touserdata, engine_upvalueindex, lua_State};
+use crate::ffi::{lua_State, zl_touserdata, zl_upvalueindex};
 use crate::{Context, Error, NonYieldable};
 use std::ffi::c_int;
 use std::panic::RefUnwindSafe;
@@ -11,9 +11,9 @@ where
     let cb = if size_of::<F>() == 0 {
         std::ptr::dangling::<F>()
     } else {
-        let cb = unsafe { engine_upvalueindex(1) };
+        let cb = unsafe { zl_upvalueindex(1) };
 
-        unsafe { engine_touserdata(L, cb).cast::<F>().cast_const() }
+        unsafe { zl_touserdata(L, cb).cast::<F>().cast_const() }
     };
 
     match unsafe { (*cb)(&mut cx) } {

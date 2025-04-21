@@ -2,7 +2,7 @@ pub use self::r#async::*;
 pub use self::result::*;
 
 use crate::FrameState;
-use crate::ffi::{LUA_MULTRET, engine_gettop, engine_pop, zl_pcall};
+use crate::ffi::{LUA_MULTRET, zl_gettop, zl_pcall, zl_pop};
 use crate::{AsyncState, Frame, MainState, Str};
 use std::ffi::c_int;
 
@@ -22,7 +22,7 @@ impl<'a, P: Frame> Function<'a, P> {
     #[inline(always)]
     pub(crate) unsafe fn new(p: &'a mut P) -> Self {
         // TODO: Find a way to eliminate this for FixedRet.
-        let func = unsafe { engine_gettop(p.state().get()) };
+        let func = unsafe { zl_gettop(p.state().get()) };
 
         Self {
             parent: Some(p),
@@ -48,7 +48,7 @@ where
         }
 
         // Get results.
-        let l = unsafe { engine_gettop(p.state().get()) - (self.func - 1) };
+        let l = unsafe { zl_gettop(p.state().get()) - (self.func - 1) };
 
         Ok(unsafe { Ret::new(p, l) })
     }
@@ -75,7 +75,7 @@ impl<'a, P: Frame> Drop for Function<'a, P> {
         };
 
         if self.args != 0 {
-            unsafe { engine_pop(p.state().get(), self.args) };
+            unsafe { zl_pop(p.state().get(), self.args) };
         }
 
         unsafe { p.release_values(1) };

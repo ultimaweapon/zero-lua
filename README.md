@@ -9,9 +9,14 @@ Zero Lua use a virtual frame to achieve memory safety with zero cost. Each frame
 
 ## Features
 
-- Direct access to Lua stack with zero cost.
-- Async support with ability to yield values between Lua.
+- Safe access to Lua stack with zero cost.
+- Async support with ability to yield values between Rust and Lua.
 - Work with any async executor.
+
+## Quickstart
+
+> [!IMPORTANT]
+> Zero Lua patched `api_incr_top` macro to raise a panic when stack overflow. Usually you do not have to worry about this since you need to push more than `LUA_MINSTACK` (which is 20) to trigger this panic.
 
 ## Development
 

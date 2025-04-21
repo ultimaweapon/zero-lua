@@ -1,4 +1,4 @@
-use crate::ffi::{engine_pop, lua54_replace, lua54_setglobal};
+use crate::ffi::{zl_pop, zl_replace, zl_setglobal};
 use crate::{Frame, FrameState};
 use std::ffi::{CStr, c_int};
 
@@ -39,7 +39,7 @@ where
     #[inline(always)]
     fn drop(&mut self) {
         if self.has_value {
-            unsafe { lua54_setglobal(self.state().get(), self.name.as_ref().as_ptr()) };
+            unsafe { zl_setglobal(self.state().get(), self.name.as_ref().as_ptr()) };
         }
     }
 }
@@ -63,11 +63,11 @@ where
         let excess = n - 1;
 
         if excess > 0 {
-            unsafe { engine_pop(self.state().get(), excess) };
+            unsafe { zl_pop(self.state().get(), excess) };
         }
 
         if self.has_value {
-            unsafe { lua54_replace(self.state().get(), -2) };
+            unsafe { zl_replace(self.state().get(), -2) };
         }
 
         self.has_value = true;

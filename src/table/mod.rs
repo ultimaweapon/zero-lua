@@ -2,7 +2,7 @@ pub use self::borrowed::*;
 pub use self::frame::*;
 pub use self::key::*;
 
-use crate::ffi::engine_pop;
+use crate::ffi::zl_pop;
 use crate::{Frame, FrameState};
 use std::ffi::c_int;
 
@@ -16,6 +16,7 @@ pub struct Table<'a, P: Frame>(&'a mut P);
 impl<'a, P: Frame> Table<'a, P> {
     /// # Safety
     /// Top of the stack must be a table.
+    #[inline(always)]
     pub(crate) unsafe fn new(p: &'a mut P) -> Self {
         Self(p)
     }
@@ -42,6 +43,6 @@ impl<'a, P: Frame> FrameState for Table<'a, P> {
     }
 
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { engine_pop(self.state().get(), n) };
+        unsafe { zl_pop(self.state().get(), n) };
     }
 }

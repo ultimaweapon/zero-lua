@@ -1,4 +1,4 @@
-use crate::ffi::{engine_pop, engine_touserdata, lua_State, lua54_getfield, zl_globalmetatable};
+use crate::ffi::{lua_State, zl_getfield, zl_globalmetatable, zl_pop, zl_touserdata};
 use crate::{Type, UserData};
 use std::any::{TypeId, type_name};
 use std::ffi::c_int;
@@ -24,13 +24,13 @@ pub unsafe fn push_metatable<T: UserData>(#[allow(non_snake_case)] L: *mut lua_S
     // 2. We screw ourself.
     //
     // The first case required unsafe code and the second case is our own bug.
-    unsafe { lua54_getfield(L, -1, c"typeid".as_ptr()) };
+    unsafe { zl_getfield(L, -1, c"typeid".as_ptr()) };
 
     // SAFETY: TypeId is Copy.
-    let ud = unsafe { engine_touserdata(L, -1) };
+    let ud = unsafe { zl_touserdata(L, -1) };
     let id = unsafe { ud.cast::<TypeId>().read_unaligned() };
 
-    unsafe { engine_pop(L, 1) };
+    unsafe { zl_pop(L, 1) };
 
     if id != TypeId::of::<T>() {
         panic!("{} is not registered", type_name::<T>())
@@ -41,7 +41,7 @@ pub unsafe extern "C-unwind" fn finalizer<T>(#[allow(non_snake_case)] L: *mut lu
 where
     T: 'static,
 {
-    let ptr = unsafe { engine_touserdata(L, 1).cast::<T>() };
+    let ptr = unsafe { zl_touserdata(L, 1).cast::<T>() };
     unsafe { std::ptr::drop_in_place(ptr) };
     0
 }

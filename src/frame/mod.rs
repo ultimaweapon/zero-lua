@@ -5,10 +5,10 @@ use self::r#async::async_invoker;
 use self::function::invoker;
 use self::userdata::{finalizer, push_metatable};
 use crate::ffi::{
-    ZL_REGISTRYINDEX, engine_checkstack, engine_createtable, engine_newuserdatauv, engine_pop,
-    engine_pushcclosure, engine_pushnil, engine_setfield, zl_load, zl_newmetatable, zl_pushboolean,
-    zl_pushlstring, zl_require_base, zl_require_coroutine, zl_require_io, zl_require_math,
-    zl_require_os, zl_require_string, zl_require_table, zl_require_utf8, zl_setmetatable,
+    ZL_REGISTRYINDEX, zl_checkstack, zl_createtable, zl_load, zl_newmetatable, zl_newuserdatauv,
+    zl_pop, zl_pushboolean, zl_pushcclosure, zl_pushlstring, zl_pushnil, zl_require_base,
+    zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os, zl_require_string,
+    zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
 };
 use crate::{
     Bool, Context, Error, Function, GlobalSetter, MainState, Nil, NonYieldable, Str, Table,
@@ -39,32 +39,29 @@ pub trait Frame: FrameState {
     where
         Self: FrameState<State = MainState>,
     {
-        // SAFETY: 2 is the maximum values we pushed here.
-        unsafe { engine_checkstack(self.state().get(), 2) };
-
         if unsafe { zl_newmetatable(self.state().get(), T::name().as_ptr()) == 0 } {
-            unsafe { engine_pop(self.state().get(), 1) };
+            unsafe { zl_pop(self.state().get(), 1) };
             return false;
         }
 
         T::setup_metatable(&mut ManuallyDrop::new(unsafe { Table::new(self) }));
 
         // Set "typeid".
-        let ud = unsafe { engine_newuserdatauv(self.state().get(), size_of::<TypeId>(), 0) };
+        let ud = unsafe { zl_newuserdatauv(self.state().get(), size_of::<TypeId>(), 0) };
 
         unsafe { ud.cast::<TypeId>().write_unaligned(TypeId::of::<T>()) };
-        unsafe { engine_setfield(self.state().get(), -2, c"typeid".as_ptr()) };
+        unsafe { zl_setfield(self.state().get(), -2, c"typeid".as_ptr()) };
 
         // Set finalizer.
         if is_boxed::<T>() {
-            unsafe { engine_pushcclosure(self.state().get(), finalizer::<Box<T>>, 0) };
-            unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_pushcclosure(self.state().get(), finalizer::<Box<T>>, 0) };
+            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
         } else if std::mem::needs_drop::<T>() {
-            unsafe { engine_pushcclosure(self.state().get(), finalizer::<T>, 0) };
-            unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_pushcclosure(self.state().get(), finalizer::<T>, 0) };
+            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
         }
 
-        unsafe { engine_pop(self.state().get(), 1) };
+        unsafe { zl_pop(self.state().get(), 1) };
 
         // Add to global.
         T::setup_global(GlobalSetter::new(self, T::name()));
@@ -72,67 +69,51 @@ pub trait Frame: FrameState {
         true
     }
 
+    #[inline(always)]
     fn require_base(&mut self, global: bool) -> Table<Self> {
-        // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_base.
-        unsafe { engine_checkstack(self.state().get(), 3) };
         unsafe { zl_require_base(self.state().get(), global) };
-
         unsafe { Table::new(self) }
     }
 
+    #[inline(always)]
     fn require_coroutine(&mut self, global: bool) -> Table<Self> {
-        // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_coroutine.
-        unsafe { engine_checkstack(self.state().get(), 3) };
         unsafe { zl_require_coroutine(self.state().get(), global) };
-
         unsafe { Table::new(self) }
     }
 
+    #[inline(always)]
     fn require_io(&mut self, global: bool) -> Table<Self> {
-        // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_io.
-        unsafe { engine_checkstack(self.state().get(), 3) };
         unsafe { zl_require_io(self.state().get(), global) };
-
         unsafe { Table::new(self) }
     }
 
+    #[inline(always)]
     fn require_math(&mut self, global: bool) -> Table<Self> {
-        // SAFETY: 4 is maximum stack size used by luaL_requiref + luaopen_math.
-        unsafe { engine_checkstack(self.state().get(), 4) };
         unsafe { zl_require_math(self.state().get(), global) };
-
         unsafe { Table::new(self) }
     }
 
+    #[inline(always)]
     fn require_os(&mut self, global: bool) -> Table<Self> {
-        // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_os.
-        unsafe { engine_checkstack(self.state().get(), 3) };
         unsafe { zl_require_os(self.state().get(), global) };
-
         unsafe { Table::new(self) }
     }
 
+    #[inline(always)]
     fn require_string(&mut self, global: bool) -> Table<Self> {
-        // SAFETY: 4 is maximum stack size used by luaL_requiref + luaopen_string.
-        unsafe { engine_checkstack(self.state().get(), 4) };
         unsafe { zl_require_string(self.state().get(), global) };
-
         unsafe { Table::new(self) }
     }
 
+    #[inline(always)]
     fn require_table(&mut self, global: bool) -> Table<Self> {
-        // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_table.
-        unsafe { engine_checkstack(self.state().get(), 3) };
         unsafe { zl_require_table(self.state().get(), global) };
-
         unsafe { Table::new(self) }
     }
 
+    #[inline(always)]
     fn require_utf8(&mut self, global: bool) -> Table<Self> {
-        // SAFETY: 3 is maximum stack size used by luaL_requiref + luaopen_utf8.
-        unsafe { engine_checkstack(self.state().get(), 3) };
         unsafe { zl_require_utf8(self.state().get(), global) };
-
         unsafe { Table::new(self) }
     }
 
@@ -153,8 +134,9 @@ pub trait Frame: FrameState {
         &mut self,
         file: impl AsRef<Path>,
     ) -> Result<Result<Function<Self>, Str<Self>>, std::io::Error> {
-        // SAFETY: engine_load return either error object or a chunk.
-        unsafe { engine_checkstack(self.state().get(), 1) };
+        // SAFETY: lua_load use luaO_pushvfstring to push the error, which does not use
+        // api_incr_top.
+        unsafe { zl_checkstack(self.state().get(), 1) };
 
         // Read file.
         let file = file.as_ref();
@@ -179,32 +161,32 @@ pub trait Frame: FrameState {
         Ok(r)
     }
 
+    #[inline(always)]
     fn push_nil(&mut self) -> Nil<Self> {
-        unsafe { engine_checkstack(self.state().get(), 1) };
-        unsafe { engine_pushnil(self.state().get()) };
+        unsafe { zl_pushnil(self.state().get()) };
 
         unsafe { Nil::new(self) }
     }
 
+    #[inline(always)]
     fn push_bool(&mut self, v: bool) -> Bool<Self> {
-        unsafe { engine_checkstack(self.state().get(), 1) };
         unsafe { zl_pushboolean(self.state().get(), v) };
 
         unsafe { Bool::new(self) }
     }
 
+    #[inline(always)]
     fn push_str(&mut self, v: impl AsRef<[u8]>) -> Str<Self> {
         let v = v.as_ref();
 
-        unsafe { engine_checkstack(self.state().get(), 1) };
         unsafe { zl_pushlstring(self.state().get(), v.as_ptr().cast(), v.len()) };
 
         unsafe { Str::new(self) }
     }
 
+    #[inline(always)]
     fn push_table(&mut self, narr: u16, nrec: u16) -> Table<Self> {
-        unsafe { engine_checkstack(self.state().get(), 1) };
-        unsafe { engine_createtable(self.state().get(), narr.into(), nrec.into()) };
+        unsafe { zl_createtable(self.state().get(), narr.into(), nrec.into()) };
 
         unsafe { Table::new(self) }
     }
@@ -212,15 +194,12 @@ pub trait Frame: FrameState {
     /// # Panics
     /// If `T` was not registered with [`Frame::register_ud()`].
     fn push_ud<T: UserData>(&mut self, v: T) -> UserValue<Self> {
-        // SAFETY: Maximum pushed from luaL_newmetatable is 2.
-        unsafe { engine_checkstack(self.state().get(), 3) };
-
         if is_boxed::<T>() {
-            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<Box<T>>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<T>>(), 0) };
 
             unsafe { ptr.cast::<Box<T>>().write(v.into()) };
         } else {
-            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<T>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<T>(), 0) };
 
             unsafe { ptr.cast::<T>().write(v) };
         }
@@ -236,41 +215,38 @@ pub trait Frame: FrameState {
     where
         F: Fn(&mut Context<NonYieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
     {
-        // SAFETY: 3 is maximum items we pushed here.
-        unsafe { engine_checkstack(self.state().get(), 3) };
-
         if size_of::<F>() == 0 {
-            unsafe { engine_pushcclosure(self.state().get(), invoker::<F>, 0) };
+            unsafe { zl_pushcclosure(self.state().get(), invoker::<F>, 0) };
         } else if align_of::<F>() <= align_of::<*mut ()>() {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<F>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<F>(), 0) };
 
             unsafe { ptr.cast::<F>().write(f) };
 
             // Set finalizer.
             if std::mem::needs_drop::<F>() {
-                unsafe { engine_createtable(self.state().get(), 0, 1) };
-                unsafe { engine_pushcclosure(self.state().get(), finalizer::<F>, 0) };
-                unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+                unsafe { zl_createtable(self.state().get(), 0, 1) };
+                unsafe { zl_pushcclosure(self.state().get(), finalizer::<F>, 0) };
+                unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
                 unsafe { zl_setmetatable(self.state().get(), -2) };
             }
 
             // Push invoker.
-            unsafe { engine_pushcclosure(self.state().get(), invoker::<F>, 1) };
+            unsafe { zl_pushcclosure(self.state().get(), invoker::<F>, 1) };
         } else {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<Box<F>>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<F>>(), 0) };
 
             unsafe { ptr.cast::<Box<F>>().write(f.into()) };
 
             // Set finalizer.
-            unsafe { engine_createtable(self.state().get(), 0, 1) };
-            unsafe { engine_pushcclosure(self.state().get(), finalizer::<Box<F>>, 0) };
-            unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_createtable(self.state().get(), 0, 1) };
+            unsafe { zl_pushcclosure(self.state().get(), finalizer::<Box<F>>, 0) };
+            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
             unsafe { zl_setmetatable(self.state().get(), -2) };
 
             // Push invoker.
-            unsafe { engine_pushcclosure(self.state().get(), invoker::<Box<F>>, 1) };
+            unsafe { zl_pushcclosure(self.state().get(), invoker::<Box<F>>, 1) };
         }
 
         unsafe { Function::new(self) }
@@ -281,46 +257,44 @@ pub trait Frame: FrameState {
     where
         F: AsyncFn(&mut Context<Yieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
     {
-        // SAFETY: 3 is maximum items we pushed here.
-        unsafe { engine_checkstack(self.state().get(), 3) };
-
         if size_of::<F>() == 0 {
-            unsafe { engine_pushcclosure(self.state().get(), async_invoker::<F>, 0) };
+            unsafe { zl_pushcclosure(self.state().get(), async_invoker::<F>, 0) };
         } else if align_of::<F>() <= align_of::<*mut ()>() {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<F>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<F>(), 0) };
 
             unsafe { ptr.cast::<F>().write(f) };
 
             // Set finalizer.
             if std::mem::needs_drop::<F>() {
-                unsafe { engine_createtable(self.state().get(), 0, 1) };
-                unsafe { engine_pushcclosure(self.state().get(), finalizer::<F>, 0) };
-                unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+                unsafe { zl_createtable(self.state().get(), 0, 1) };
+                unsafe { zl_pushcclosure(self.state().get(), finalizer::<F>, 0) };
+                unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
                 unsafe { zl_setmetatable(self.state().get(), -2) };
             }
 
             // Push invoker.
-            unsafe { engine_pushcclosure(self.state().get(), async_invoker::<F>, 1) };
+            unsafe { zl_pushcclosure(self.state().get(), async_invoker::<F>, 1) };
         } else {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { engine_newuserdatauv(self.state().get(), size_of::<Box<F>>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<F>>(), 0) };
 
             unsafe { ptr.cast::<Box<F>>().write(f.into()) };
 
             // Set finalizer.
-            unsafe { engine_createtable(self.state().get(), 0, 1) };
-            unsafe { engine_pushcclosure(self.state().get(), finalizer::<Box<F>>, 0) };
-            unsafe { engine_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_createtable(self.state().get(), 0, 1) };
+            unsafe { zl_pushcclosure(self.state().get(), finalizer::<Box<F>>, 0) };
+            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
             unsafe { zl_setmetatable(self.state().get(), -2) };
 
             // Push invoker.
-            unsafe { engine_pushcclosure(self.state().get(), async_invoker::<Box<F>>, 1) };
+            unsafe { zl_pushcclosure(self.state().get(), async_invoker::<Box<F>>, 1) };
         }
 
         unsafe { Function::new(self) }
     }
 
+    #[inline(always)]
     fn as_yield(&mut self) -> Yield<Self>
     where
         Self: FrameState<State = Yieldable>,

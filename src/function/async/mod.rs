@@ -2,7 +2,7 @@ pub use self::result::*;
 
 use self::resume::Resume;
 use super::Ret;
-use crate::ffi::{LUA_OK, LUA_YIELD, engine_pop};
+use crate::ffi::{LUA_OK, LUA_YIELD, zl_pop};
 use crate::{Frame, FrameState, Str};
 use std::cell::Cell;
 use std::ffi::c_int;
@@ -69,11 +69,11 @@ impl<'a, P: Frame> Drop for AsyncCall<'a, P> {
         }
 
         if self.args != 0 {
-            unsafe { engine_pop(self.state().get(), self.args) };
+            unsafe { zl_pop(self.state().get(), self.args) };
         }
 
         if !self.polled {
-            unsafe { engine_pop(self.state().get(), 1) };
+            unsafe { zl_pop(self.state().get(), 1) };
         }
     }
 }

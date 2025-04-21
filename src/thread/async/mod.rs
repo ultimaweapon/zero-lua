@@ -2,7 +2,7 @@ pub(crate) use self::state::*;
 
 use super::MainState;
 use crate::FrameState;
-use crate::ffi::{ZL_REGISTRYINDEX, engine_pop, zl_newthread, zl_ref, zl_unref};
+use crate::ffi::{ZL_REGISTRYINDEX, zl_newthread, zl_pop, zl_ref, zl_unref};
 use std::ffi::c_int;
 use std::marker::PhantomPinned;
 use std::pin::Pin;
@@ -59,6 +59,6 @@ impl FrameState for AsyncThread {
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { engine_pop(self.state.get(), n) };
+        unsafe { zl_pop(self.state.get(), n) };
     }
 }

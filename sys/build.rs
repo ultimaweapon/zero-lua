@@ -1,6 +1,5 @@
-use std::path::{MAIN_SEPARATOR_STR, Path};
-
 use flate2::read::MultiGzDecoder;
+use std::path::{MAIN_SEPARATOR_STR, Path};
 
 fn main() {
     let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
@@ -20,6 +19,26 @@ fn main() {
         let mut tar = tar::Archive::new(tar);
 
         tar.unpack(&root).unwrap();
+
+        // Get path to lapi.h.
+        let mut path = path.join("src");
+
+        path.push("lapi.h");
+
+        // Patch api_incr_top.
+        let content = std::fs::read_to_string(&path).unwrap();
+        let content = content.replacen(
+            "/* Increments 'L->top.p', checking for stack overflows */\n#define api_incr_top(L)	{L->top.p++; \\\n			 api_check(L, L->top.p <= L->ci->top.p, \\\n					\"stack overflow\");}",
+            r#"extern "C" {
+	[[noreturn]] void zl_panic(const char *msg) noexcept;
+}
+
+/* Increments 'L->top.p', checking for stack overflows */
+#define api_incr_top(L)	{L->top.p++; if (L->top.p > L->ci->top.p) zl_panic("Lua stack overflow");}"#,
+            1,
+        );
+
+        std::fs::write(path, content).unwrap();
     }
 
     // Setup builder.

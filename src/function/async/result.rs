@@ -1,4 +1,4 @@
-use crate::ffi::engine_pop;
+use crate::ffi::zl_pop;
 use crate::{Frame, FrameState};
 use std::ffi::c_int;
 
@@ -22,6 +22,6 @@ impl<'a, P: Frame> FrameState for AsyncFrame<'a, P> {
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { engine_pop(self.state().get(), n) };
+        unsafe { zl_pop(self.state().get(), n) };
     }
 }

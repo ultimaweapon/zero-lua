@@ -1,5 +1,5 @@
 use crate::Type;
-use crate::ffi::{engine_setfield, lua_State, lua54_getfield, lua54_geti, lua54_seti, zl_ref};
+use crate::ffi::{lua_State, zl_getfield, zl_geti, zl_ref, zl_setfield, zl_seti};
 use std::ffi::{CStr, c_int};
 use std::io::Write;
 
@@ -51,14 +51,14 @@ impl TableGetter for c_int {
 impl TableGetter for i64 {
     #[inline(always)]
     unsafe fn get_value(&self, state: *mut lua_State, table: c_int) -> Type {
-        unsafe { lua54_geti(state, table, *self) }
+        unsafe { zl_geti(state, table, *self) }
     }
 }
 
 impl TableGetter for &CStr {
     #[inline(always)]
     unsafe fn get_value(&self, state: *mut lua_State, table: c_int) -> Type {
-        unsafe { lua54_getfield(state, table, self.as_ptr()) }
+        unsafe { zl_getfield(state, table, self.as_ptr()) }
     }
 }
 
@@ -77,13 +77,13 @@ impl TableSetter for &mut c_int {
 impl TableSetter for i64 {
     #[inline(always)]
     unsafe fn set_value(&mut self, state: *mut lua_State, table: c_int) {
-        unsafe { lua54_seti(state, table, *self) };
+        unsafe { zl_seti(state, table, *self) };
     }
 }
 
 impl TableSetter for &CStr {
     #[inline(always)]
     unsafe fn set_value(&mut self, state: *mut lua_State, table: c_int) {
-        unsafe { engine_setfield(state, table, self.as_ptr()) };
+        unsafe { zl_setfield(state, table, self.as_ptr()) };
     }
 }

@@ -1,6 +1,6 @@
 use crate::ffi::{
-    engine_checkstack, engine_touserdata, engine_upvalueindex, lua_State, zl_error,
-    zl_getextraspace, zl_pushlightuserdata, zl_yieldk,
+    lua_State, zl_error, zl_getextraspace, zl_pushlightuserdata, zl_touserdata, zl_upvalueindex,
+    zl_yieldk,
 };
 use crate::{AsyncContext, Context, Error, Yieldable};
 use std::ffi::c_int;
@@ -28,8 +28,8 @@ where
     let cb = if size_of::<F>() == 0 {
         std::ptr::dangling::<F>()
     } else {
-        let cb = unsafe { engine_upvalueindex(1) };
-        let cb = unsafe { engine_touserdata(L, cb).cast::<F>() };
+        let cb = unsafe { zl_upvalueindex(1) };
+        let cb = unsafe { zl_touserdata(L, cb).cast::<F>() };
 
         cb.cast_const()
     };
@@ -59,8 +59,6 @@ unsafe fn async_yield<F>(state: *mut lua_State, f: Pin<Box<F>>, cx: &mut AsyncCo
 where
     F: Future<Output = c_int>,
 {
-    unsafe { engine_checkstack(state, 3) };
-
     // All lua_pushlightuserdata never fails.
     let f = unsafe { Pin::into_inner_unchecked(f) };
     let f = Box::into_raw(f);

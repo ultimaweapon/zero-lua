@@ -1,5 +1,5 @@
 use super::TableSetter;
-use crate::ffi::{engine_pop, lua54_replace};
+use crate::ffi::{zl_pop, zl_replace};
 use crate::{Frame, FrameState};
 use std::ffi::c_int;
 
@@ -68,11 +68,11 @@ where
         let excess = n - 1;
 
         if excess > 0 {
-            unsafe { engine_pop(self.state().get(), excess) };
+            unsafe { zl_pop(self.state().get(), excess) };
         }
 
         if self.has_value {
-            unsafe { lua54_replace(self.state().get(), -2) };
+            unsafe { zl_replace(self.state().get(), -2) };
         }
 
         self.has_value = true;

@@ -1,4 +1,4 @@
-use crate::ffi::{engine_isnil, engine_tointegerx, lua54_type};
+use crate::ffi::{zl_isnil, zl_tointegerx, zl_type};
 use crate::{Frame, Type};
 use std::ffi::c_int;
 
@@ -27,7 +27,7 @@ impl<'a, P: Frame> Ret<'a, P> {
     /// If `n` is less than 1 or geater than [len](Self::len()).
     #[inline(always)]
     pub fn to_nil(&mut self, n: c_int) -> Option<()> {
-        unsafe { engine_isnil(self.parent.state().get(), self.index(n)).then_some(()) }
+        unsafe { zl_isnil(self.parent.state().get(), self.index(n)).then_some(()) }
     }
 
     /// `n` is one-based the same as function arguments.
@@ -37,7 +37,7 @@ impl<'a, P: Frame> Ret<'a, P> {
     #[inline(always)]
     pub fn to_int(&mut self, n: c_int) -> Option<i64> {
         let mut ok = 0;
-        let val = unsafe { engine_tointegerx(self.parent.state().get(), self.index(n), &mut ok) };
+        let val = unsafe { zl_tointegerx(self.parent.state().get(), self.index(n), &mut ok) };
 
         if ok == 0 { None } else { Some(val) }
     }
@@ -48,7 +48,7 @@ impl<'a, P: Frame> Ret<'a, P> {
     /// If `n` is less than 1 or geater than [len](Self::len()).
     #[inline(always)]
     pub fn to_type(&mut self, n: c_int) -> Type {
-        unsafe { lua54_type(self.parent.state().get(), self.index(n)) }
+        unsafe { zl_type(self.parent.state().get(), self.index(n)) }
     }
 
     #[inline(always)]
