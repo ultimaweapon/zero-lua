@@ -38,7 +38,7 @@ impl<'a> Resume<'a> {
     }
 }
 
-impl<'a> Future for Resume<'a> {
+impl Future for Resume<'_> {
     type Output = c_int;
 
     #[inline(never)]
@@ -91,7 +91,7 @@ impl<'a> Future for Resume<'a> {
 
         *this.pending = Some(PendingFuture {
             future,
-            drop: unsafe { transmute(drop) },
+            drop: unsafe { transmute::<*mut u8, unsafe fn(*mut ())>(drop) },
         });
 
         unsafe { zl_pop(this.state.get(), 3) };
@@ -128,14 +128,14 @@ impl<'a, 'b, 'c> ContextLock<'a, 'b, 'c> {
     }
 }
 
-impl<'a, 'b, 'c> Drop for ContextLock<'a, 'b, 'c> {
+impl Drop for ContextLock<'_, '_, '_> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.cx.write(null_mut()) };
     }
 }
 
-impl<'a, 'b, 'c> Deref for ContextLock<'a, 'b, 'c> {
+impl Deref for ContextLock<'_, '_, '_> {
     type Target = State;
 
     fn deref(&self) -> &Self::Target {
@@ -143,7 +143,7 @@ impl<'a, 'b, 'c> Deref for ContextLock<'a, 'b, 'c> {
     }
 }
 
-impl<'a, 'b, 'c> DerefMut for ContextLock<'a, 'b, 'c> {
+impl DerefMut for ContextLock<'_, '_, '_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.st
     }

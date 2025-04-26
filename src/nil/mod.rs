@@ -16,7 +16,7 @@ impl<'a, P: Frame> Nil<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for Nil<'a, P> {
+impl<P: Frame> Drop for Nil<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.0.release_values(1) };

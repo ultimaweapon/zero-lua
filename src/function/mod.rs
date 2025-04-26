@@ -66,7 +66,7 @@ where
     }
 }
 
-impl<'a, P: Frame> Drop for Function<'a, P> {
+impl<P: Frame> Drop for Function<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         let p = match self.parent.take() {
@@ -82,7 +82,7 @@ impl<'a, P: Frame> Drop for Function<'a, P> {
     }
 }
 
-impl<'a, P: Frame> FrameState for Function<'a, P> {
+impl<P: Frame> FrameState for Function<'_, P> {
     type State = P::State;
 
     #[inline(always)]

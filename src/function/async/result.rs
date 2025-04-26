@@ -12,7 +12,7 @@ impl<'a, P: Frame> AsyncFrame<'a, P> {
     }
 }
 
-impl<'a, P: Frame> FrameState for AsyncFrame<'a, P> {
+impl<P: Frame> FrameState for AsyncFrame<'_, P> {
     type State = P::State;
 
     #[inline(always)]

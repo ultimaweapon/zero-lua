@@ -14,7 +14,7 @@ impl<'a, P: Frame> Iter<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for Iter<'a, P> {
+impl<P: Frame> Drop for Iter<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.parent.release_values(3) };

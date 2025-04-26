@@ -31,7 +31,7 @@ where
     }
 }
 
-impl<'a, P, N> Drop for GlobalSetter<'a, P, N>
+impl<P, N> Drop for GlobalSetter<'_, P, N>
 where
     P: Frame,
     N: AsRef<CStr>,
@@ -44,7 +44,7 @@ where
     }
 }
 
-impl<'a, P, N> FrameState for GlobalSetter<'a, P, N>
+impl<P, N> FrameState for GlobalSetter<'_, P, N>
 where
     P: Frame,
     N: AsRef<CStr>,

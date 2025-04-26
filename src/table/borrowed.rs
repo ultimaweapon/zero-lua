@@ -25,7 +25,7 @@ impl<'a, P: Frame> BorrowedTable<'a, P> {
     }
 }
 
-impl<'a, P: Frame> FrameState for BorrowedTable<'a, P> {
+impl<P: Frame> FrameState for BorrowedTable<'_, P> {
     type State = P::State;
 
     #[inline(always)]

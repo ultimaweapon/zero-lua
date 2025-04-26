@@ -2,6 +2,9 @@ use crate::Frame;
 use std::num::NonZero;
 
 /// Type can be converted to Lua value.
+///
+/// # Safety
+/// [`IntoLua::Value`] must be able to handle the values pushed by [`IntoLua::into_lua()`].
 pub unsafe trait IntoLua {
     type Value<'a, P: Frame + 'a>: FrameValue<'a, P>;
 
@@ -11,6 +14,9 @@ pub unsafe trait IntoLua {
 }
 
 /// Represents a value in a virtual frame.
+///
+/// # Safety
+/// [`FrameValue::N`] must be correct for this type.
 pub unsafe trait FrameValue<'a, P: Frame> {
     const N: NonZero<u8>;
 }

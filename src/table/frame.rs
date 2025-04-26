@@ -36,7 +36,7 @@ where
     }
 }
 
-impl<'a, P, K> Drop for TableFrame<'a, P, K>
+impl<P, K> Drop for TableFrame<'_, P, K>
 where
     P: Frame,
     K: TableSetter,
@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<'a, P, K> FrameState for TableFrame<'a, P, K>
+impl<P, K> FrameState for TableFrame<'_, P, K>
 where
     P: Frame,
     K: TableSetter,

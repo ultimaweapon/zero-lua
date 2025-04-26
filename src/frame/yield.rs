@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<'a, P: Frame> Drop for Yield<'a, P> {
+impl<P: Frame> Drop for Yield<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.values != 0 {
@@ -58,7 +58,7 @@ impl<'a, P: Frame> Drop for Yield<'a, P> {
     }
 }
 
-impl<'a, P: Frame> FrameState for Yield<'a, P> {
+impl<P: Frame> FrameState for Yield<'_, P> {
     type State = P::State;
 
     #[inline(always)]
@@ -75,7 +75,7 @@ impl<'a, P: Frame> FrameState for Yield<'a, P> {
 /// RAII struct to remove yield values.
 struct ValuesGuard<'a>(&'a mut Yieldable);
 
-impl<'a> Drop for ValuesGuard<'a> {
+impl Drop for ValuesGuard<'_> {
     #[inline(always)]
     fn drop(&mut self) {
         let n = match Yieldable::values(self.0).take() {
@@ -90,7 +90,7 @@ impl<'a> Drop for ValuesGuard<'a> {
     }
 }
 
-impl<'a> Deref for ValuesGuard<'a> {
+impl Deref for ValuesGuard<'_> {
     type Target = Cell<YieldValues>;
 
     #[inline(always)]

@@ -15,7 +15,7 @@ impl<'a, P: Frame> Bool<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for Bool<'a, P> {
+impl<P: Frame> Drop for Bool<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.0.release_values(Self::N.get().into()) };

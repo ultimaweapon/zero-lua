@@ -29,13 +29,13 @@ impl<'a, P: Frame> Table<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for Table<'a, P> {
+impl<P: Frame> Drop for Table<'_, P> {
     fn drop(&mut self) {
         unsafe { self.0.release_values(1) };
     }
 }
 
-impl<'a, P: Frame> FrameState for Table<'a, P> {
+impl<P: Frame> FrameState for Table<'_, P> {
     type State = P::State;
 
     fn state(&mut self) -> &mut Self::State {

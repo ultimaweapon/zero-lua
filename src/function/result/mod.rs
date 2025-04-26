@@ -17,6 +17,11 @@ impl<'a, P: Frame> Ret<'a, P> {
     }
 
     #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    #[inline(always)]
     pub fn len(&self) -> c_int {
         self.len
     }
@@ -63,7 +68,7 @@ impl<'a, P: Frame> Ret<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for Ret<'a, P> {
+impl<P: Frame> Drop for Ret<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.len > 0 {

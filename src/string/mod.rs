@@ -47,7 +47,7 @@ impl<'a, P: Frame> Str<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for Str<'a, P> {
+impl<P: Frame> Drop for Str<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.0.release_values(Self::N.get().into()) };

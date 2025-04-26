@@ -61,7 +61,7 @@ impl<'a, P: Frame> AsyncCall<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for AsyncCall<'a, P> {
+impl<P: Frame> Drop for AsyncCall<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         if let Some(v) = self.pending.take() {
@@ -78,7 +78,7 @@ impl<'a, P: Frame> Drop for AsyncCall<'a, P> {
     }
 }
 
-impl<'a, P: Frame> FrameState for AsyncCall<'a, P> {
+impl<P: Frame> FrameState for AsyncCall<'_, P> {
     type State = P::State;
 
     #[inline(always)]

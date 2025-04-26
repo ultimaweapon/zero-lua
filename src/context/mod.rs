@@ -221,7 +221,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     }
 }
 
-impl<'a, S: LocalState> FrameState for Context<'a, S> {
+impl<S: LocalState> FrameState for Context<'_, S> {
     type State = S;
 
     #[inline(always)]

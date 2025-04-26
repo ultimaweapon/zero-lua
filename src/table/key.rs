@@ -38,6 +38,8 @@ impl TableKey for &CStr {
 
 /// Provides a function to get a value from Lua table.
 pub trait TableGetter: TableKey {
+    /// # Safety
+    /// `table` must be valid.
     unsafe fn get_value(&self, state: *mut lua_State, table: c_int) -> Type;
 }
 
@@ -64,6 +66,8 @@ impl TableGetter for &CStr {
 
 /// Provides a function to set a value to Lua table.
 pub trait TableSetter: TableKey {
+    /// # Safety
+    /// `table` must be valid.
     unsafe fn set_value(&mut self, state: *mut lua_State, table: c_int);
 }
 

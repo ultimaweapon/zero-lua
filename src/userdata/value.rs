@@ -17,7 +17,7 @@ impl<'a, P: Frame> UserValue<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for UserValue<'a, P> {
+impl<P: Frame> Drop for UserValue<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.0.release_values(Self::N.get().into()) };
@@ -28,7 +28,7 @@ unsafe impl<'a, P: Frame> FrameValue<'a, P> for UserValue<'a, P> {
     const N: NonZero<u8> = NonZero::new(1).unwrap();
 }
 
-impl<'a, P: Frame> FrameState for UserValue<'a, P> {
+impl<P: Frame> FrameState for UserValue<'_, P> {
     type State = P::State;
 
     #[inline(always)]
