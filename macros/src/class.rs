@@ -54,8 +54,12 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
         };
 
         // Parse attributes.
-        let mut ty = FnType::Method;
         let mut i = 0;
+        let mut ty = if f.sig.asyncness.is_some() {
+            FnType::AsyncMethod
+        } else {
+            FnType::Method
+        };
 
         while i < f.attrs.len() {
             // Skip inner.
@@ -86,6 +90,10 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
 
                 ty = FnType::Close;
             } else if a.path().is_ident("prop") {
+                if f.sig.asyncness.is_some() {
+                    return Err(Error::new_spanned(a, "async property is not supported"));
+                }
+
                 ty = FnType::Property;
             } else {
                 i += 1;
@@ -104,6 +112,9 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
         match ty {
             FnType::Method => index.extend(quote_spanned! {span=>
                 #name => drop(cx.push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx))),
+            }),
+            FnType::AsyncMethod => index.extend(quote_spanned! {span=>
+                #name => drop(cx.push_async(async |cx| cx.to_ud::<Self>(1).#ident(cx).await)),
             }),
             FnType::Property => index.extend(quote_spanned! {span=>
                 #name => return v.#ident(cx),
@@ -221,6 +232,7 @@ impl Options {
 
 enum FnType {
     Method,
+    AsyncMethod,
     Property,
     ClassMethod,
     Close,
