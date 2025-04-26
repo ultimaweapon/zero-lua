@@ -4,6 +4,7 @@ pub use self::error::*;
 pub use self::frame::*;
 pub use self::function::*;
 pub use self::global::*;
+pub use self::iter::*;
 pub use self::nil::*;
 pub use self::option::*;
 pub use self::string::*;
@@ -26,6 +27,7 @@ mod ffi;
 mod frame;
 mod function;
 mod global;
+mod iter;
 mod nil;
 mod option;
 mod state;
@@ -34,6 +36,7 @@ mod table;
 mod thread;
 mod ty;
 mod userdata;
+mod value;
 
 extern crate zl_sys; // Required since no Rust code references this crate.
 

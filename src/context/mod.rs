@@ -1,8 +1,8 @@
 pub use self::state::*;
 
 use crate::ffi::{
-    zl_argerror, zl_checklstring, zl_error, zl_getfield, zl_getmetatable, zl_gettop, zl_isnil,
-    zl_istable, zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
+    zl_argerror, zl_checklstring, zl_error, zl_getfield, zl_getmetatable, zl_isnil, zl_istable,
+    zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
 };
 use crate::{BorrowedTable, Error, ErrorKind, FrameState, UserData, is_boxed};
 use std::any::TypeId;
@@ -23,9 +23,7 @@ pub struct Context<'a, S = NonYieldable> {
 
 impl<'a, S: LocalState> Context<'a, S> {
     #[inline(always)]
-    pub(crate) fn new(state: S) -> Self {
-        let args = unsafe { zl_gettop(state.get()) };
-
+    pub(crate) unsafe fn new(state: S, args: c_int) -> Self {
         Self {
             state,
             args,

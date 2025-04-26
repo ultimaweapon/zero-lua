@@ -1,4 +1,8 @@
+pub use self::nilable::*;
+
 use crate::Frame;
+
+mod nilable;
 
 /// Encapsulates Lua nil value in a frame.
 pub struct Nil<'a, P: Frame>(&'a mut P);

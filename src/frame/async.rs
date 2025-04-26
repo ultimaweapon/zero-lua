@@ -1,6 +1,6 @@
 use crate::ffi::{
-    lua_State, zl_error, zl_getextraspace, zl_pushlightuserdata, zl_touserdata, zl_upvalueindex,
-    zl_yieldk,
+    lua_State, zl_error, zl_getextraspace, zl_gettop, zl_pushlightuserdata, zl_touserdata,
+    zl_upvalueindex, zl_yieldk,
 };
 use crate::{AsyncContext, Context, Error, Yieldable};
 use std::ffi::c_int;
@@ -15,6 +15,8 @@ pub unsafe extern "C-unwind" fn async_invoker<F>(
 where
     F: AsyncFn(&mut Context<Yieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
 {
+    let args = unsafe { zl_gettop(L) };
+
     // Check if calling from Future::poll().
     let cx = unsafe { zl_getextraspace(L).cast::<*mut AsyncContext>() };
     let cx = unsafe { cx.replace(null_mut()) }; // SAFETY: Prevent downstream to access this.
@@ -38,7 +40,7 @@ where
     let cx = unsafe { &mut *cx };
     let s = unsafe { Yieldable::new(L, cx.values.clone()) };
     let mut f = Box::pin(async move {
-        let mut cx = Context::new(s);
+        let mut cx = unsafe { Context::new(s, args) };
 
         match unsafe { (*cb)(&mut cx).await } {
             Ok(_) => cx.into_results(),

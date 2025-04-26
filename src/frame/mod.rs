@@ -3,25 +3,28 @@ pub use self::r#yield::*;
 
 use self::r#async::async_invoker;
 use self::function::invoker;
-use self::userdata::{finalizer, push_metatable};
+use self::userdata::finalizer;
 use crate::ffi::{
     ZL_REGISTRYINDEX, zl_checkstack, zl_createtable, zl_load, zl_newmetatable, zl_newuserdatauv,
-    zl_pop, zl_pushboolean, zl_pushcclosure, zl_pushlstring, zl_pushnil, zl_require_base,
-    zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os, zl_require_string,
-    zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
+    zl_pop, zl_pushcclosure, zl_pushnil, zl_require_base, zl_require_coroutine, zl_require_io,
+    zl_require_math, zl_require_os, zl_require_string, zl_require_table, zl_require_utf8,
+    zl_setfield, zl_setmetatable,
 };
+use crate::value::IntoLua;
 use crate::{
-    Bool, Context, Error, Function, GlobalSetter, MainState, Nil, NonYieldable, Str, Table,
+    Bool, Context, Error, Function, GlobalSetter, Iter, MainState, Nil, NonYieldable, Str, Table,
     TableFrame, TableGetter, TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::CStr;
+use std::iter::Fuse;
 use std::mem::ManuallyDrop;
 use std::panic::RefUnwindSafe;
 use std::path::Path;
 
 mod r#async;
 mod function;
+mod iter;
 mod state;
 mod userdata;
 mod r#yield;
@@ -162,6 +165,11 @@ pub trait Frame: FrameState {
     }
 
     #[inline(always)]
+    fn push<T: IntoLua>(&mut self, v: T) -> T::Value<'_, Self> {
+        v.into_lua(self)
+    }
+
+    #[inline(always)]
     fn push_nil(&mut self) -> Nil<Self> {
         unsafe { zl_pushnil(self.state().get()) };
 
@@ -170,18 +178,12 @@ pub trait Frame: FrameState {
 
     #[inline(always)]
     fn push_bool(&mut self, v: bool) -> Bool<Self> {
-        unsafe { zl_pushboolean(self.state().get(), v) };
-
-        unsafe { Bool::new(self) }
+        self.push(v)
     }
 
     #[inline(always)]
     fn push_str(&mut self, v: impl AsRef<[u8]>) -> Str<Self> {
-        let v = v.as_ref();
-
-        unsafe { zl_pushlstring(self.state().get(), v.as_ptr().cast(), v.len()) };
-
-        unsafe { Str::new(self) }
+        self.push(v.as_ref())
     }
 
     #[inline(always)]
@@ -191,23 +193,55 @@ pub trait Frame: FrameState {
         unsafe { Table::new(self) }
     }
 
+    fn push_iter<T, I>(&mut self, v: T) -> Iter<Self>
+    where
+        T: IntoIterator<Item: IntoLua, IntoIter = I>,
+        I: Iterator<Item = T::Item> + 'static,
+    {
+        let v = v.into_iter().fuse();
+
+        if align_of::<Fuse<I>>() > align_of::<*mut ()>() {
+            // Push iterator function.
+            unsafe { zl_pushcclosure(self.state().get(), self::iter::next::<Box<Fuse<I>>>, 0) };
+
+            // Push state.
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<Fuse<I>>>(), 0) };
+
+            unsafe { ptr.cast::<Box<Fuse<I>>>().write(v.into()) };
+
+            // Set finalizer.
+            unsafe { zl_createtable(self.state().get(), 0, 1) };
+            unsafe { zl_pushcclosure(self.state().get(), finalizer::<Box<Fuse<I>>>, 0) };
+            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_setmetatable(self.state().get(), -2) };
+        } else {
+            // Push iterator function.
+            unsafe { zl_pushcclosure(self.state().get(), self::iter::next::<Fuse<I>>, 0) };
+
+            // Push state.
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Fuse<I>>(), 0) };
+
+            unsafe { ptr.cast::<Fuse<I>>().write(v) };
+
+            // Set finalizer.
+            if std::mem::needs_drop::<Fuse<I>>() {
+                unsafe { zl_createtable(self.state().get(), 0, 1) };
+                unsafe { zl_pushcclosure(self.state().get(), finalizer::<Fuse<I>>, 0) };
+                unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+                unsafe { zl_setmetatable(self.state().get(), -2) };
+            }
+        }
+
+        // Push control variable.
+        unsafe { zl_pushnil(self.state().get()) };
+
+        unsafe { Iter::new(self) }
+    }
+
     /// # Panics
     /// If `T` was not registered with [`Frame::register_ud()`].
     fn push_ud<T: UserData>(&mut self, v: T) -> UserValue<Self> {
-        if is_boxed::<T>() {
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<T>>(), 0) };
-
-            unsafe { ptr.cast::<Box<T>>().write(v.into()) };
-        } else {
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<T>(), 0) };
-
-            unsafe { ptr.cast::<T>().write(v) };
-        }
-
-        unsafe { push_metatable::<T>(self.state().get()) };
-        unsafe { zl_setmetatable(self.state().get(), -2) };
-
-        unsafe { UserValue::new(self) }
+        self.push(v)
     }
 
     /// See [`Context`] for how to return some values to Lua.
