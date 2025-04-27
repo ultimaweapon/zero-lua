@@ -214,6 +214,11 @@ extern "C" void *zl_newuserdatauv(lua_State *L, size_t size, int nuvalue)
     return lua_newuserdatauv(L, size, nuvalue);
 }
 
+extern "C" int zl_setiuservalue(lua_State *L, int index, uint16_t n)
+{
+    return lua_setiuservalue(L, index, n);
+}
+
 extern "C" int zl_newmetatable(lua_State *L, const char *tname)
 {
     return luaL_newmetatable(L, tname);

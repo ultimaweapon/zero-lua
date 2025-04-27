@@ -1,6 +1,5 @@
-use crate::ffi::{zl_pushlstring, zl_tolstring};
-use crate::value::{FrameValue, IntoLua};
-use crate::{Frame, FromOption, OptionError};
+use crate::ffi::zl_tolstring;
+use crate::{Frame, FrameValue, FromOption, OptionError};
 use std::ffi::CStr;
 use std::num::NonZero;
 use std::ptr::null_mut;
@@ -56,24 +55,4 @@ impl<P: Frame> Drop for Str<'_, P> {
 
 unsafe impl<'a, P: Frame> FrameValue<'a, P> for Str<'a, P> {
     const N: NonZero<u8> = NonZero::new(1).unwrap();
-}
-
-unsafe impl IntoLua for &str {
-    type Value<'a, P: Frame + 'a> = Str<'a, P>;
-
-    #[inline(always)]
-    fn into_lua<P: Frame>(self, p: &mut P) -> Self::Value<'_, P> {
-        unsafe { zl_pushlstring(p.state().get(), self.as_ptr().cast(), self.len()) };
-        Str(p)
-    }
-}
-
-unsafe impl IntoLua for &[u8] {
-    type Value<'a, P: Frame + 'a> = Str<'a, P>;
-
-    #[inline(always)]
-    fn into_lua<P: Frame>(self, p: &mut P) -> Self::Value<'_, P> {
-        unsafe { zl_pushlstring(p.state().get(), self.as_ptr().cast(), self.len()) };
-        Str(p)
-    }
 }

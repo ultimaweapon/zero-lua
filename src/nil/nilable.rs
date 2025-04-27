@@ -1,5 +1,4 @@
-use crate::Frame;
-use crate::value::{FrameValue, IntoLua};
+use crate::{Frame, FrameValue};
 use std::num::NonZero;
 
 /// Represents either nil or value on the top of stack.
@@ -31,22 +30,4 @@ where
     P: Frame,
 {
     const N: NonZero<u8> = T::N;
-}
-
-unsafe impl<T: IntoLua> IntoLua for Option<T> {
-    type Value<'a, P: Frame + 'a> = Nilable<'a, T::Value<'a, P>, P>;
-
-    #[inline(always)]
-    fn into_lua<P: Frame>(self, p: &mut P) -> Self::Value<'_, P> {
-        match self {
-            Some(v) => Nilable::Value(v.into_lua(p)),
-            None => {
-                for _ in 0..<T::Value<'_, P> as FrameValue<P>>::N.get() {
-                    p.push_nil();
-                }
-
-                Nilable::Nil(p)
-            }
-        }
-    }
 }

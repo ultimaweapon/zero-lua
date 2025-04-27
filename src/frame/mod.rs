@@ -3,17 +3,16 @@ pub use self::r#yield::*;
 
 use self::r#async::async_invoker;
 use self::function::invoker;
-use self::userdata::finalizer;
+use self::userdata::{finalizer, push_metatable};
 use crate::ffi::{
     ZL_REGISTRYINDEX, zl_checkstack, zl_createtable, zl_load, zl_newmetatable, zl_newuserdatauv,
-    zl_pop, zl_pushcclosure, zl_pushnil, zl_require_base, zl_require_coroutine, zl_require_io,
-    zl_require_math, zl_require_os, zl_require_string, zl_require_table, zl_require_utf8,
-    zl_setfield, zl_setmetatable,
+    zl_pop, zl_pushboolean, zl_pushcclosure, zl_pushlstring, zl_pushnil, zl_require_base,
+    zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os, zl_require_string,
+    zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
 };
-use crate::value::IntoLua;
 use crate::{
-    Bool, Context, Error, Function, GlobalSetter, Iter, MainState, Nil, NonYieldable, Str, Table,
-    TableFrame, TableGetter, TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
+    Bool, Context, Error, Function, GlobalSetter, IntoLua, Iter, MainState, Nil, NonYieldable, Str,
+    Table, TableFrame, TableGetter, TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::CStr;
@@ -165,25 +164,23 @@ pub trait Frame: FrameState {
     }
 
     #[inline(always)]
-    fn push<T: IntoLua>(&mut self, v: T) -> T::Value<'_, Self> {
-        v.into_lua(self)
-    }
-
-    #[inline(always)]
     fn push_nil(&mut self) -> Nil<Self> {
         unsafe { zl_pushnil(self.state().get()) };
-
         unsafe { Nil::new(self) }
     }
 
     #[inline(always)]
     fn push_bool(&mut self, v: bool) -> Bool<Self> {
-        self.push(v)
+        unsafe { zl_pushboolean(self.state().get(), v) };
+        unsafe { Bool::new(self) }
     }
 
     #[inline(always)]
     fn push_str(&mut self, v: impl AsRef<[u8]>) -> Str<Self> {
-        self.push(v.as_ref())
+        let v = v.as_ref();
+
+        unsafe { zl_pushlstring(self.state().get(), v.as_ptr().cast(), v.len()) };
+        unsafe { Str::new(self) }
     }
 
     #[inline(always)]
@@ -241,7 +238,24 @@ pub trait Frame: FrameState {
     /// # Panics
     /// If `T` was not registered with [`Frame::register_ud()`].
     fn push_ud<T: UserData>(&mut self, v: T) -> UserValue<Self> {
-        self.push(v)
+        // Create userdata.
+        let nuvalue = T::user_values().map(|v| v.get()).unwrap_or(0).into();
+
+        if is_boxed::<T>() {
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<T>>(), nuvalue) };
+
+            unsafe { ptr.cast::<Box<T>>().write(v.into()) };
+        } else {
+            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<T>(), nuvalue) };
+
+            unsafe { ptr.cast::<T>().write(v) };
+        }
+
+        // Set metatable.
+        unsafe { push_metatable::<T>(self.state().get()) };
+        unsafe { zl_setmetatable(self.state().get(), -2) };
+
+        unsafe { UserValue::new(self) }
     }
 
     /// See [`Context`] for how to return some values to Lua.

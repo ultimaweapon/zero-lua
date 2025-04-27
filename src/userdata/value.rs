@@ -1,11 +1,10 @@
-use super::{UserData, is_boxed, push_metatable};
-use crate::ffi::{zl_newuserdatauv, zl_pop, zl_setmetatable};
-use crate::value::{FrameValue, IntoLua};
-use crate::{Frame, FrameState};
+use super::UserFrame;
+use crate::ffi::zl_pop;
+use crate::{Frame, FrameState, FrameValue};
 use std::ffi::c_int;
 use std::num::NonZero;
 
-/// Represents a user data in a frame.
+/// Represents a user data on the top of stack.
 pub struct UserValue<'a, P: Frame>(&'a mut P);
 
 impl<'a, P: Frame> UserValue<'a, P> {
@@ -15,6 +14,16 @@ impl<'a, P: Frame> UserValue<'a, P> {
     pub(crate) unsafe fn new(p: &'a mut P) -> Self {
         Self(p)
     }
+
+    /// Note that [`Drop`] implementation on [`UserFrame`] will silently fails if `n` is not a valid
+    /// index for user value.
+    ///
+    /// # Panics
+    /// If `n` is zero.
+    #[inline(always)]
+    pub fn set_user_value(&mut self, n: u16) -> UserFrame<Self> {
+        unsafe { UserFrame::new(self, n.try_into().unwrap()) }
+    }
 }
 
 impl<P: Frame> Drop for UserValue<'_, P> {
@@ -22,10 +31,6 @@ impl<P: Frame> Drop for UserValue<'_, P> {
     fn drop(&mut self) {
         unsafe { self.0.release_values(Self::N.get().into()) };
     }
-}
-
-unsafe impl<'a, P: Frame> FrameValue<'a, P> for UserValue<'a, P> {
-    const N: NonZero<u8> = NonZero::new(1).unwrap();
 }
 
 impl<P: Frame> FrameState for UserValue<'_, P> {
@@ -42,23 +47,6 @@ impl<P: Frame> FrameState for UserValue<'_, P> {
     }
 }
 
-unsafe impl<T: UserData> IntoLua for T {
-    type Value<'a, P: Frame + 'a> = UserValue<'a, P>;
-
-    fn into_lua<P: Frame>(self, p: &mut P) -> Self::Value<'_, P> {
-        if is_boxed::<T>() {
-            let ptr = unsafe { zl_newuserdatauv(p.state().get(), size_of::<Box<T>>(), 0) };
-
-            unsafe { ptr.cast::<Box<T>>().write(self.into()) };
-        } else {
-            let ptr = unsafe { zl_newuserdatauv(p.state().get(), size_of::<T>(), 0) };
-
-            unsafe { ptr.cast::<T>().write(self) };
-        }
-
-        unsafe { push_metatable::<T>(p.state().get()) };
-        unsafe { zl_setmetatable(p.state().get(), -2) };
-
-        UserValue(p)
-    }
+unsafe impl<'a, P: Frame> FrameValue<'a, P> for UserValue<'a, P> {
+    const N: NonZero<u8> = NonZero::new(1).unwrap();
 }
