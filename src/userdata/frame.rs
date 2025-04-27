@@ -23,7 +23,7 @@ impl<'a, P: Frame> UserFrame<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for UserFrame<'a, P> {
+impl<P: Frame> Drop for UserFrame<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.has_value {
@@ -32,7 +32,7 @@ impl<'a, P: Frame> Drop for UserFrame<'a, P> {
     }
 }
 
-impl<'a, P: Frame> FrameState for UserFrame<'a, P> {
+impl<P: Frame> FrameState for UserFrame<'_, P> {
     type State = P::State;
 
     #[inline(always)]
