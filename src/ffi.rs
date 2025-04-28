@@ -60,6 +60,7 @@ unsafe extern "C-unwind" {
     pub fn zl_setfield(L: *mut lua_State, index: c_int, k: *const c_char);
     pub fn zl_newuserdatauv(L: *mut lua_State, size: usize, nuvalue: c_int) -> *mut u8;
     pub fn zl_setiuservalue(L: *mut lua_State, index: c_int, n: u16) -> c_int;
+    pub fn zl_getiuservalue(L: *mut lua_State, index: c_int, n: u16) -> Type;
     pub fn zl_newmetatable(L: *mut lua_State, tname: *const c_char) -> c_int;
     pub fn zl_globalmetatable(L: *mut lua_State, tname: *const c_char) -> Type;
     pub fn zl_setmetatable(L: *mut lua_State, index: c_int);

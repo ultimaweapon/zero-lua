@@ -1,27 +1,27 @@
 use super::TableGetter;
 use crate::ffi::zl_pop;
-use crate::{Frame, FrameState, Value};
+use crate::{Frame, FrameState, PositiveInt, Value};
 use std::ffi::c_int;
 
-/// Encapsulates a borrowed table in the stack.
+/// Encapsulates a table in the stack.
 ///
 /// This kind of table either come from function argument or results.
 pub struct BorrowedTable<'a, P: Frame> {
     parent: &'a mut P,
-    index: c_int,
+    index: PositiveInt,
 }
 
 impl<'a, P: Frame> BorrowedTable<'a, P> {
     /// # Safety
     /// `index` must be a table.
     #[inline(always)]
-    pub(crate) unsafe fn new(parent: &'a mut P, index: c_int) -> Self {
+    pub(crate) unsafe fn new(parent: &'a mut P, index: PositiveInt) -> Self {
         Self { parent, index }
     }
 
     #[inline(always)]
     pub fn get<K: TableGetter>(&mut self, key: K) -> Value<Self> {
-        unsafe { Value::from_table(self, self.index, key) }
+        unsafe { Value::from_table(self, self.index.get(), key) }
     }
 }
 

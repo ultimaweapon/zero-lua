@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::ffi::c_int;
 use std::num::NonZero;
 
@@ -6,6 +7,8 @@ use std::num::NonZero;
 pub struct PositiveInt(NonZero<c_int>);
 
 impl PositiveInt {
+    pub const ONE: Self = Self::new(1).unwrap();
+
     pub const fn new(v: c_int) -> Option<Self> {
         let v = match NonZero::new(v) {
             Some(v) => v,
@@ -17,5 +20,19 @@ impl PositiveInt {
 
     pub const fn get(self) -> c_int {
         self.0.get()
+    }
+}
+
+impl PartialEq<c_int> for PositiveInt {
+    #[inline(always)]
+    fn eq(&self, other: &c_int) -> bool {
+        self.get().eq(other)
+    }
+}
+
+impl PartialOrd<c_int> for PositiveInt {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &c_int) -> Option<Ordering> {
+        self.get().partial_cmp(other)
     }
 }

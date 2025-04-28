@@ -1,3 +1,4 @@
+pub use self::borrowed::*;
 pub use self::frame::*;
 pub use self::value::*;
 
@@ -6,10 +7,11 @@ use std::ffi::CStr;
 use std::num::NonZero;
 use std::panic::RefUnwindSafe;
 
+mod borrowed;
 mod frame;
 mod value;
 
-/// Strongly typed Lua user data.
+/// Strongly typed full userdata.
 pub trait UserData: RefUnwindSafe + 'static {
     fn name() -> &'static CStr;
 

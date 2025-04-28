@@ -111,13 +111,13 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
 
         match ty {
             FnType::Method => index.extend(quote_spanned! {span=>
-                #name => drop(cx.push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx))),
+                #name => drop(cx.push_fn(Self::#ident)),
             }),
             FnType::AsyncMethod => index.extend(quote_spanned! {span=>
-                #name => drop(cx.push_async(async |cx| cx.to_ud::<Self>(1).#ident(cx).await)),
+                #name => drop(cx.push_async(Self::#ident)),
             }),
             FnType::Property => index.extend(quote_spanned! {span=>
-                #name => return v.#ident(cx),
+                #name => return Self::#ident(cx),
             }),
             FnType::ClassMethod => {
                 let name = CString::new(name).unwrap();
@@ -130,7 +130,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
             }
             FnType::Close => {
                 close = quote! {
-                    t.set(c"__close").push_fn(|cx| cx.to_ud::<Self>(1).#ident(cx));
+                    t.set(c"__close").push_fn(Self::#ident);
                 }
             }
         }
@@ -144,7 +144,6 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
     if !index.is_empty() {
         meta.extend(quote! {
             t.set(c"__index").push_fn(|cx| {
-                let v = cx.to_ud::<Self>(1);
                 let n = cx.to_str(2);
 
                 match n {

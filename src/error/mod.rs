@@ -1,8 +1,7 @@
 pub use self::msg::*;
 
-use crate::{Frame, TableKey, Value};
+use crate::{Frame, PositiveInt, TableKey, Value};
 use std::borrow::Cow;
-use std::ffi::c_int;
 
 mod msg;
 
@@ -12,18 +11,12 @@ mod msg;
 pub struct Error(ErrorKind);
 
 impl Error {
-    /// # Panics
-    /// If `arg` is zero or negative.
-    pub fn arg_type(arg: c_int, expect: impl Into<ErrorMsg>) -> Self {
-        assert!(arg > 0);
-
+    pub fn arg_type(arg: PositiveInt, expect: impl Into<ErrorMsg>) -> Self {
         Self(ErrorKind::ArgType(arg, expect.into().into()))
     }
 
-    /// # Panics
-    /// If `arg` is zero or negative.
     #[inline(never)]
-    pub fn arg_from_std(arg: c_int, e: impl std::error::Error) -> Self {
+    pub fn arg_from_std(arg: PositiveInt, e: impl std::error::Error) -> Self {
         let mut msg = e.to_string();
         let mut src = e.source();
 
@@ -37,18 +30,12 @@ impl Error {
         Self::arg(arg, msg)
     }
 
-    /// # Panics
-    /// If `arg` is zero or negative.
-    pub fn arg(arg: c_int, msg: impl Into<ErrorMsg>) -> Self {
-        assert!(arg > 0);
-
+    pub fn arg(arg: PositiveInt, msg: impl Into<ErrorMsg>) -> Self {
         Self(ErrorKind::Arg(arg, msg.into().into()))
     }
 
-    /// # Panics
-    /// If `arg` is zero or negative.
     pub fn arg_table_type<P>(
-        arg: c_int,
+        arg: PositiveInt,
         key: impl TableKey,
         expect: impl AsRef<[u8]>,
         mut val: Value<P>,
@@ -68,9 +55,11 @@ impl Error {
         Self::arg(arg, ErrorMsg::Dynamic(m))
     }
 
-    /// # Panics
-    /// If `arg` is zero or negative.
-    pub fn arg_table_from_std(arg: c_int, key: impl TableKey, e: impl std::error::Error) -> Self {
+    pub fn arg_table_from_std(
+        arg: PositiveInt,
+        key: impl TableKey,
+        e: impl std::error::Error,
+    ) -> Self {
         use std::io::Write;
 
         // Write prefix.
@@ -92,9 +81,7 @@ impl Error {
         Self::arg(arg, ErrorMsg::Dynamic(m))
     }
 
-    /// # Panics
-    /// If `arg` is zero or negative.
-    pub fn arg_table(arg: c_int, key: impl TableKey, msg: impl AsRef<[u8]>) -> Self {
+    pub fn arg_table(arg: PositiveInt, key: impl TableKey, msg: impl AsRef<[u8]>) -> Self {
         let mut m = Vec::new();
 
         m.push(b'[');
@@ -144,11 +131,10 @@ impl<E: std::error::Error> From<(String, E)> for Error {
 pub(crate) enum ErrorKind {
     /// # Safety
     /// Second value must null-terminated.
-    Arg(c_int, Cow<'static, [u8]>),
+    Arg(PositiveInt, Cow<'static, [u8]>),
     /// # Safety
-    /// - First value must be positive.
-    /// - Second value must null-terminated.
-    ArgType(c_int, Cow<'static, [u8]>),
+    /// Second value must null-terminated.
+    ArgType(PositiveInt, Cow<'static, [u8]>),
     /// # Safety
     /// The value must null-terminated.
     Other(Cow<'static, [u8]>),

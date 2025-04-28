@@ -4,7 +4,9 @@ use crate::ffi::{
     zl_argerror, zl_checklstring, zl_error, zl_getfield, zl_getmetatable, zl_isnil, zl_istable,
     zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
 };
-use crate::{BorrowedTable, Error, ErrorKind, FrameState, UserData, is_boxed};
+use crate::{
+    BorrowedTable, BorrowedUd, Error, ErrorKind, FrameState, PositiveInt, UserData, is_boxed,
+};
 use std::any::TypeId;
 use std::ffi::c_int;
 use std::marker::PhantomData;
@@ -59,12 +61,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     /// string.
     ///
     /// This method always raise a Lua error if `n` is not a function argument.
-    ///
-    /// # Panics
-    /// If `n` is zero or negative.
-    pub fn to_str(&self, n: c_int) -> &'a str {
-        assert!(n > 0);
-
+    pub fn to_str(&self, n: PositiveInt) -> &'a str {
         if n > self.args {
             // engine_checkstring require a valid index so we need to emulate its behavior in this
             // case.
@@ -73,7 +70,7 @@ impl<'a, S: LocalState> Context<'a, S> {
 
         // SAFETY: luaL_checklstring never return null.
         let mut l = 0;
-        let v = unsafe { zl_checklstring(self.state.get(), n, &mut l) };
+        let v = unsafe { zl_checklstring(self.state.get(), n.get(), &mut l) };
         let v = unsafe { std::slice::from_raw_parts(v.cast(), l) };
 
         match std::str::from_utf8(v) {
@@ -87,19 +84,14 @@ impl<'a, S: LocalState> Context<'a, S> {
     ///
     /// This method return [`None`] if the argument is not a string or `n` is not a function
     /// argument.
-    ///
-    /// # Panics
-    /// If `n` is zero or negative.
-    pub fn try_str(&self, n: c_int) -> Option<&'a str> {
-        assert!(n > 0);
-
+    pub fn try_str(&self, n: PositiveInt) -> Option<&'a str> {
         if n > self.args {
             return None;
         }
 
         // Get value.
         let mut l = 0;
-        let v = unsafe { zl_tolstring(self.state.get(), n, &mut l) };
+        let v = unsafe { zl_tolstring(self.state.get(), n.get(), &mut l) };
 
         if v.is_null() {
             return None;
@@ -117,17 +109,13 @@ impl<'a, S: LocalState> Context<'a, S> {
     /// Get table argument or raise a Lua error if the argument is not a table.
     ///
     /// This method always raise a Lua error if `n` is not a function argument.
-    ///
-    /// # Panics
-    /// If `n` is zero or negative.
-    pub fn to_table(&mut self, n: c_int) -> BorrowedTable<Self> {
-        assert!(n > 0);
-
+    #[inline(always)]
+    pub fn to_table(&mut self, n: PositiveInt) -> BorrowedTable<Self> {
         if n > self.args {
             // lua_istable require a valid index so we need to emulate its behavior in this case.
             self.arg_out_of_bound(n, b"table");
-        } else if !unsafe { zl_istable(self.state.get(), n) } {
-            unsafe { zl_typeerror(self.state.get(), n, c"table".as_ptr()) };
+        } else if !unsafe { zl_istable(self.state.get(), n.get()) } {
+            unsafe { zl_typeerror(self.state.get(), n.get(), c"table".as_ptr()) };
         }
 
         unsafe { BorrowedTable::new(self, n) }
@@ -136,24 +124,16 @@ impl<'a, S: LocalState> Context<'a, S> {
     /// Get table argument or returns [`None`] if the argument is not a table.
     ///
     /// This method always return [`None`] if `n` is not a function argument.
-    ///
-    /// # Panics
-    /// If `n` is zero or negative.
-    pub fn try_table(&mut self, n: c_int) -> Option<BorrowedTable<Self>> {
-        assert!(n > 0);
-
-        if n > self.args || !unsafe { zl_istable(self.state.get(), n) } {
+    #[inline(always)]
+    pub fn try_table(&mut self, n: PositiveInt) -> Option<BorrowedTable<Self>> {
+        if n > self.args || !unsafe { zl_istable(self.state.get(), n.get()) } {
             return None;
         }
 
         Some(unsafe { BorrowedTable::new(self, n) })
     }
 
-    /// # Panics
-    /// If `n` is zero or negative.
-    pub fn to_ud<T: UserData>(&self, n: c_int) -> &'a T {
-        assert!(n > 0);
-
+    pub fn to_ud<T: UserData>(&mut self, n: PositiveInt) -> BorrowedUd<'_, 'a, Self, T> {
         if n > self.args {
             // lua_touserdata require a valid index so we need to emulate luaL_checkudata behavior
             // in this case.
@@ -161,10 +141,10 @@ impl<'a, S: LocalState> Context<'a, S> {
         }
 
         // We emulate luaL_checkudata here since we need to get additional field from metatable.
-        let ptr = unsafe { zl_touserdata(self.state.get(), n).cast_const() };
+        let ptr = unsafe { zl_touserdata(self.state.get(), n.get()).cast_const() };
 
-        if ptr.is_null() || unsafe { zl_getmetatable(self.state.get(), n) == 0 } {
-            unsafe { zl_typeerror(self.state.get(), n, T::name().as_ptr()) };
+        if ptr.is_null() || unsafe { zl_getmetatable(self.state.get(), n.get()) == 0 } {
+            unsafe { zl_typeerror(self.state.get(), n.get(), T::name().as_ptr()) };
         }
 
         unsafe { zl_getfield(self.state.get(), -1, c"typeid".as_ptr()) };
@@ -176,13 +156,16 @@ impl<'a, S: LocalState> Context<'a, S> {
 
         unsafe { zl_pop(self.state.get(), 2) };
 
-        if !ok {
-            unsafe { zl_typeerror(self.state.get(), n, T::name().as_ptr()) };
+        // Get pointer to UD.
+        let ud = if !ok {
+            unsafe { zl_typeerror(self.state.get(), n.get(), T::name().as_ptr()) };
         } else if is_boxed::<T>() {
             unsafe { (*ptr.cast::<Box<T>>()).as_ref() }
         } else {
             unsafe { &*ptr.cast::<T>() }
-        }
+        };
+
+        unsafe { BorrowedUd::new(self, n, ud) }
     }
 
     pub(crate) fn into_results(self) -> c_int {
@@ -193,14 +176,15 @@ impl<'a, S: LocalState> Context<'a, S> {
     pub(crate) fn raise(&self, e: Error) -> ! {
         let (n, e) = match e.into() {
             // SAFETY: n only used to format the message.
-            ErrorKind::Arg(n, e) => unsafe { zl_argerror(self.state.get(), n, e.as_ptr().cast()) },
+            ErrorKind::Arg(n, e) => unsafe {
+                zl_argerror(self.state.get(), n.get(), e.as_ptr().cast())
+            },
             ErrorKind::ArgType(n, e) => (n, e),
             ErrorKind::Other(e) => unsafe { zl_error(self.state.get(), e.as_ptr().cast()) },
         };
 
         if n <= self.args {
-            // SAFETY: n is positive.
-            unsafe { zl_typeerror(self.state.get(), n, e.as_ptr().cast()) };
+            unsafe { zl_typeerror(self.state.get(), n.get(), e.as_ptr().cast()) };
         } else {
             // lua54_typeerror require index to be valid so we need to emulate its behavior in this
             // case.
@@ -209,7 +193,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     }
 
     #[inline(never)]
-    fn arg_out_of_bound(&self, n: c_int, expect: &[u8]) -> ! {
+    fn arg_out_of_bound(&self, n: PositiveInt, expect: &[u8]) -> ! {
         let s = b" expected, got nil";
         let mut m = Vec::with_capacity(expect.len() + s.len() + 1);
 
@@ -217,7 +201,7 @@ impl<'a, S: LocalState> Context<'a, S> {
         m.extend_from_slice(s);
         m.push(0);
 
-        unsafe { zl_argerror(self.state.get(), n, m.as_ptr().cast()) };
+        unsafe { zl_argerror(self.state.get(), n.get(), m.as_ptr().cast()) };
     }
 }
 
