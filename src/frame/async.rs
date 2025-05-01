@@ -18,7 +18,7 @@ where
     let args = unsafe { zl_gettop(L) };
 
     // Check if calling from Future::poll().
-    let cx = unsafe { zl_getextraspace(L).cast::<*mut AsyncContext>() };
+    let cx = unsafe { zl_getextraspace(L).add(1).cast::<*mut AsyncContext>() };
     let cx = unsafe { cx.replace(null_mut()) }; // SAFETY: Prevent downstream to access this.
 
     if cx.is_null() {
@@ -49,10 +49,13 @@ where
     });
 
     match f.as_mut().poll(cx.cx) {
-        Poll::Ready(v) => {
-            unsafe { zl_getextraspace(L).cast::<*mut AsyncContext>().write(cx) };
+        Poll::Ready(v) => unsafe {
+            zl_getextraspace(L)
+                .add(1)
+                .cast::<*mut AsyncContext>()
+                .write(cx);
             v
-        }
+        },
         Poll::Pending => unsafe { async_yield(L, f, cx) },
     }
 }
@@ -90,15 +93,18 @@ where
     let mut f = Box::into_pin(f);
 
     // Poll.
-    let cx = unsafe { zl_getextraspace(L).cast::<*mut AsyncContext>() };
+    let cx = unsafe { zl_getextraspace(L).add(1).cast::<*mut AsyncContext>() };
     let cx = unsafe { cx.replace(null_mut()) }; // SAFETY: Prevent downstream to access this.
     let cx = unsafe { &mut *cx };
 
     match f.as_mut().poll(cx.cx) {
-        Poll::Ready(v) => {
-            unsafe { zl_getextraspace(L).cast::<*mut AsyncContext>().write(cx) };
+        Poll::Ready(v) => unsafe {
+            zl_getextraspace(L)
+                .add(1)
+                .cast::<*mut AsyncContext>()
+                .write(cx);
             v
-        }
+        },
         Poll::Pending => unsafe { async_yield(L, f, cx) },
     }
 }

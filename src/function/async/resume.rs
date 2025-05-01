@@ -1,5 +1,5 @@
 use super::{AsyncContext, PendingFuture, YieldValues};
-use crate::ffi::{LUA_YIELD, zl_getextraspace, zl_pop, zl_resume, zl_touserdata};
+use crate::ffi::{LUA_YIELD, zl_pop, zl_resume, zl_touserdata};
 use crate::state::State;
 use std::cell::Cell;
 use std::ffi::c_int;
@@ -120,7 +120,7 @@ impl<'a, 'b, 'c> ContextLock<'a, 'b, 'c> {
     /// Extra space must be a pointer size and it must not contains any data.
     #[inline(always)]
     unsafe fn new(st: &'a mut State, cx: &'a mut AsyncContext<'b, 'c>) -> Self {
-        let ptr = unsafe { zl_getextraspace(st.get()).cast::<*mut AsyncContext>() };
+        let ptr = st.extra2::<AsyncContext>();
 
         unsafe { ptr.write(cx) };
 

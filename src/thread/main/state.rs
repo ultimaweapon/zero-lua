@@ -1,26 +1,41 @@
-use crate::ffi::{zl_close, zl_newstate};
-use crate::state::State;
+use crate::ffi::{zl_close, zl_getextraspace, zl_newstate};
+use crate::state::{ExtraData, State};
 use std::ops::{Deref, DerefMut};
 
 /// Encapsulates [`State`] created from `lua_newstate`.
 pub struct MainState(State);
 
 impl MainState {
-    #[inline(always)]
     pub(super) fn new() -> Option<Self> {
+        // Create lua_State.
         let state = zl_newstate();
-
-        if state.is_null() {
-            None
+        let state = if state.is_null() {
+            return None;
         } else {
-            Some(Self(State::new(state)))
-        }
+            Self(State::new(state))
+        };
+
+        // Set extra data.
+        let space = unsafe { zl_getextraspace(state.get()).cast::<*mut ExtraData>() };
+        let extra = Box::new(ExtraData {});
+
+        unsafe { space.write(Box::into_raw(extra)) };
+
+        Some(state)
     }
 }
 
 impl Drop for MainState {
-    #[inline(always)]
     fn drop(&mut self) {
+        // Free extra data.
+        let extra = unsafe { zl_getextraspace(self.get()).cast::<*mut ExtraData>() };
+        let extra = unsafe { extra.read() };
+
+        if !extra.is_null() {
+            drop(unsafe { Box::from_raw(extra) });
+        }
+
+        // Free lua_State.
         unsafe { zl_close(self.0.get()) };
     }
 }

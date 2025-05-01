@@ -72,7 +72,7 @@ unsafe extern "C-unwind" {
     pub fn zl_replace(L: *mut lua_State, index: c_int);
     pub fn zl_pop(L: *mut lua_State, n: c_int);
     pub fn zl_error(L: *mut lua_State, msg: *const c_char) -> !;
-    pub fn zl_getextraspace(L: *mut lua_State) -> *mut u8;
+    pub fn zl_getextraspace(L: *mut lua_State) -> *mut *mut ();
     pub fn zl_newthread(L: *mut lua_State) -> *mut lua_State;
     pub fn zl_resume(
         L: *mut lua_State,

@@ -10,7 +10,7 @@
 static_assert(sizeof(lua_Integer) == sizeof(int64_t));
 static_assert(std::is_signed<lua_Integer>::value);
 static_assert(sizeof(lua_KContext) == sizeof(intptr_t));
-static_assert(LUA_EXTRASPACE == sizeof(void *));
+static_assert(LUA_EXTRASPACE == sizeof(void *) * 2);
 static_assert(LUA_MINSTACK == 20);
 static_assert(LUA_MULTRET == -1);
 
@@ -27,8 +27,6 @@ extern "C" lua_State *zl_newstate()
         return nullptr;
     }
 
-    // Lua does not mention about the initial content of extra space and it seems like Lua does not
-    // zeroed this area.
     memset(lua_getextraspace(L), 0, LUA_EXTRASPACE);
 
     return L;
