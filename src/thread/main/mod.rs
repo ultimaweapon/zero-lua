@@ -2,7 +2,7 @@ pub(crate) use self::state::*;
 
 use super::AsyncLua;
 use crate::FrameState;
-use crate::ffi::zl_pop;
+use crate::ffi::{lua_State, zl_atpanic, zl_pop};
 use std::ffi::c_int;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -20,11 +20,19 @@ impl Lua {
     /// GUI application.
     #[inline(always)]
     pub fn new() -> Option<Self> {
-        MainState::new().map(Self)
+        let state = MainState::new()?;
+
+        unsafe { zl_atpanic(state.get(), Some(Self::panic)) };
+
+        Some(Self(state))
     }
 
     pub fn into_async(self) -> Pin<Rc<AsyncLua>> {
         AsyncLua::new(self.0)
+    }
+
+    extern "C" fn panic(_: *mut lua_State) -> c_int {
+        todo!()
     }
 }
 

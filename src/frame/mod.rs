@@ -11,8 +11,9 @@ use crate::ffi::{
     zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
 };
 use crate::{
-    Bool, Context, Error, Function, GlobalSetter, IntoLua, Iter, MainState, Nil, NonYieldable, Str,
-    Table, TableFrame, TableGetter, TableSetter, UserData, UserValue, Value, Yieldable, is_boxed,
+    Bool, Context, Error, Function, GlobalSetter, IntoLua, Iter, MainState, Nil, NonYieldable,
+    PositiveInt, Str, Table, TableFrame, TableGetter, TableSetter, UserData, UserValue, Value,
+    Yieldable, is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::CStr;
@@ -30,10 +31,8 @@ mod r#yield;
 
 /// Virtual frame in a Lua stack.
 ///
-/// Most methods in this trait can raise a C++ exception. When calling outside Lua runtime it will
-/// cause the process to terminate the same as Rust panic. Inside Lua runtime it will report as Lua
-/// error. Usually you don't need to worry about this as long as you can return from the current
-/// function without requires a manual cleanup.
+/// Some methods in this trait can raise a C++ exception. When calling outside Lua runtime it will
+/// cause the process to terminate. Inside Lua runtime it will report as Lua error.
 pub trait Frame: FrameState {
     /// Returns `true` if `T` was successfully registered or `false` if the other user data with the
     /// same name already registered.
@@ -136,10 +135,6 @@ pub trait Frame: FrameState {
         &mut self,
         file: impl AsRef<Path>,
     ) -> Result<Result<Function<Self>, Str<Self>>, std::io::Error> {
-        // SAFETY: lua_load use luaO_pushvfstring to push the error, which does not use
-        // api_incr_top.
-        unsafe { zl_checkstack(self.state().get(), 1) };
-
         // Read file.
         let file = file.as_ref();
         let data = std::fs::read(file)?;
@@ -340,6 +335,13 @@ pub trait Frame: FrameState {
         }
 
         unsafe { Function::new(self) }
+    }
+
+    /// # Error
+    /// If the stack cannot grow to the requested size.
+    #[inline(always)]
+    fn ensure_stack(&mut self, n: PositiveInt) {
+        unsafe { zl_checkstack(self.state().get(), n.get()) };
     }
 
     #[inline(always)]

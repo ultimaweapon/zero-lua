@@ -1,46 +1,11 @@
-use flate2::read::MultiGzDecoder;
-use std::path::{MAIN_SEPARATOR_STR, Path};
+use std::path::MAIN_SEPARATOR_STR;
 
 fn main() {
     let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
     let root = std::env::var("CARGO_MANIFEST_DIR").unwrap();
 
-    // Check if we have Lua source.
-    let path = Path::new("lua-5.4.7");
-
-    if !path.exists() {
-        // Download and extract source.
-        let tar = ureq::get("https://www.lua.org/ftp/lua-5.4.7.tar.gz")
-            .call()
-            .unwrap()
-            .into_body()
-            .into_reader();
-        let tar = MultiGzDecoder::new(tar);
-        let mut tar = tar::Archive::new(tar);
-
-        tar.unpack(&root).unwrap();
-
-        // Get path to lapi.h.
-        let mut path = path.join("src");
-
-        path.push("lapi.h");
-
-        // Patch api_incr_top.
-        let content = std::fs::read_to_string(&path).unwrap();
-        let content = content.replacen(
-            "/* Increments 'L->top.p', checking for stack overflows */\n#define api_incr_top(L)	{L->top.p++; \\\n			 api_check(L, L->top.p <= L->ci->top.p, \\\n					\"stack overflow\");}",
-            r#"extern "C" void zl_panic(const char *msg);
-
-/* Increments 'L->top.p', checking for stack overflows */
-#define api_incr_top(L)	{L->top.p++; if (L->top.p > L->ci->top.p) zl_panic("Lua stack overflow");}"#,
-            1,
-        );
-
-        std::fs::write(path, content).unwrap();
-    }
-
     // Setup builder.
-    let lua = format!("lua-5.4.7{MAIN_SEPARATOR_STR}src");
+    let lua = "lua";
     let mut cc = cc::Build::new();
     let sources = [
         "lapi.c",

@@ -39,6 +39,11 @@ extern "C" void zl_close(lua_State *L)
     lua_close(L);
 }
 
+extern "C" lua_CFunction zl_atpanic(lua_State *L, int (*panicf) (lua_State *L))
+{
+    return lua_atpanic(L, panicf);
+}
+
 extern "C" void zl_require_base(lua_State *L, bool global)
 {
     luaL_requiref(L, LUA_GNAME, luaopen_base, global);

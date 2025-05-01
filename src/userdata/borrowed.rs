@@ -50,7 +50,7 @@ impl<'a, 'b, P: Frame, T> BorrowedUd<'a, 'b, P, T> {
     }
 }
 
-impl<'a, 'b, P: Frame, T> FrameState for BorrowedUd<'a, 'b, P, T> {
+impl<P: Frame, T> FrameState for BorrowedUd<'_, '_, P, T> {
     type State = P::State;
 
     #[inline(always)]

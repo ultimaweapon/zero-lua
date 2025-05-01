@@ -16,7 +16,7 @@ Zero Lua use a virtual frame to achieve memory safety with zero cost. Each frame
 ## Quickstart
 
 > [!IMPORTANT]
-> Zero Lua patched `api_incr_top` macro to raise a panic when stack overflow. Usually you do not have to worry about this since you need to push more than `LUA_MINSTACK` (which is 20) to trigger this panic.
+> Zero Lua uses [patched](https://github.com/ultimaweapon/lua) Lua. The notable patch is Lua will panic when out of stack instead of triggering UB. Usually you do not have to worry about this since you need to push more than `LUA_MINSTACK` (which is 20) to trigger this panic. Note that this is Lua panic, not Rust panic; so it is always abort the process.
 
 ## Development
 
