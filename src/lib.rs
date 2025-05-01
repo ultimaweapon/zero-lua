@@ -41,6 +41,8 @@ mod util;
 
 extern crate zl_sys; // Required since no Rust code references this crate.
 
+pub type PanicHandler = dyn Fn(Option<&str>);
+
 /// Encapsulates a value in the stack.
 #[non_exhaustive]
 #[repr(i32)]

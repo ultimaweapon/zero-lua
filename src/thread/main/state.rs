@@ -1,3 +1,4 @@
+use crate::PanicHandler;
 use crate::ffi::{zl_close, zl_getextraspace, zl_newstate};
 use crate::state::{ExtraData, State};
 use std::ops::{Deref, DerefMut};
@@ -6,7 +7,7 @@ use std::ops::{Deref, DerefMut};
 pub struct MainState(State);
 
 impl MainState {
-    pub(super) fn new(panic: Box<dyn Fn(Option<&str>)>) -> Option<Self> {
+    pub(super) fn new(panic: Box<PanicHandler>) -> Option<Self> {
         // Create lua_State.
         let state = zl_newstate();
         let state = if state.is_null() {

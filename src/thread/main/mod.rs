@@ -3,7 +3,7 @@ pub(crate) use self::state::*;
 use super::AsyncLua;
 use crate::ffi::{lua_State, zl_atpanic, zl_getextraspace, zl_pop, zl_tolstring, zl_type};
 use crate::state::ExtraData;
-use crate::{FrameState, Type};
+use crate::{FrameState, PanicHandler, Type};
 use std::backtrace::Backtrace;
 use std::ffi::c_int;
 use std::pin::Pin;
@@ -24,7 +24,7 @@ impl Lua {
     /// You may want to change Lua warning function after this if your application is a GUI
     /// application.
     #[inline(always)]
-    pub fn new(panic: Option<Box<dyn Fn(Option<&str>)>>) -> Option<Self> {
+    pub fn new(panic: Option<Box<PanicHandler>>) -> Option<Self> {
         // Get panic handler.
         let panic = panic.unwrap_or_else(|| {
             Box::new(|msg| {
