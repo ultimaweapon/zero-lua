@@ -1,8 +1,10 @@
 pub(crate) use self::state::*;
 
 use super::AsyncLua;
-use crate::FrameState;
-use crate::ffi::{lua_State, zl_atpanic, zl_pop};
+use crate::ffi::{lua_State, zl_atpanic, zl_getextraspace, zl_pop, zl_tolstring, zl_type};
+use crate::state::ExtraData;
+use crate::{FrameState, Type};
+use std::backtrace::Backtrace;
 use std::ffi::c_int;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -16,11 +18,27 @@ impl Lua {
     /// Create a new `lua_State` using `luaL_newstate`. Returns [`None`] if `luaL_newstate` return
     /// null.
     ///
-    /// You may want to change Lua panic and warning function after this if your application is a
-    /// GUI application.
+    /// Specify [`Some`] for `panic` if you want a custom handler for Lua panic otherwise Zero Lua
+    /// will provides a default one that print the panic to stderr.
+    ///
+    /// You may want to change Lua warning function after this if your application is a GUI
+    /// application.
     #[inline(always)]
-    pub fn new() -> Option<Self> {
-        let state = MainState::new()?;
+    pub fn new(panic: Option<Box<dyn Fn(Option<&str>)>>) -> Option<Self> {
+        // Get panic handler.
+        let panic = panic.unwrap_or_else(|| {
+            Box::new(|msg| {
+                let bt = Backtrace::force_capture();
+
+                match msg {
+                    Some(msg) => eprintln!("Lua panicked ({msg}).\n\n{bt}"),
+                    None => eprintln!("Lua panicked with an unknown error.\n\n{bt}"),
+                }
+            })
+        });
+
+        // Initialize lua_State.
+        let state = MainState::new(panic)?;
 
         unsafe { zl_atpanic(state.get(), Some(Self::panic)) };
 
@@ -31,8 +49,25 @@ impl Lua {
         AsyncLua::new(self.0)
     }
 
-    extern "C" fn panic(_: *mut lua_State) -> c_int {
-        todo!()
+    extern "C" fn panic(state: *mut lua_State) -> c_int {
+        // We can't let Lua trigger any error here so we need to check type of the error object.
+        let msg = match unsafe { zl_type(state, -1) } {
+            Type::String => unsafe {
+                let mut len = 0;
+                let ptr = zl_tolstring(state, -1, &mut len);
+                let msg = std::slice::from_raw_parts(ptr.cast(), len);
+
+                Some(String::from_utf8_lossy(msg))
+            },
+            _ => None,
+        };
+
+        // Invoke handler.
+        let ex = unsafe { zl_getextraspace(state).cast::<*const ExtraData>().read() };
+
+        unsafe { ((*ex).panic)(msg.as_ref().map(|v| v.as_ref())) };
+
+        0
     }
 }
 

@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut};
 pub struct MainState(State);
 
 impl MainState {
-    pub(super) fn new() -> Option<Self> {
+    pub(super) fn new(panic: Box<dyn Fn(Option<&str>)>) -> Option<Self> {
         // Create lua_State.
         let state = zl_newstate();
         let state = if state.is_null() {
@@ -17,7 +17,7 @@ impl MainState {
 
         // Set extra data.
         let space = unsafe { zl_getextraspace(state.get()).cast::<*mut ExtraData>() };
-        let extra = Box::new(ExtraData {});
+        let extra = Box::new(ExtraData { panic });
 
         unsafe { space.write(Box::into_raw(extra)) };
 
