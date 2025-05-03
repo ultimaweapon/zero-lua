@@ -13,7 +13,7 @@ where
     let mut cx = unsafe { Context::new(NonYieldable::new(L), 2) };
 
     match iter.next() {
-        Some(v) => drop(v.into_lua(&mut cx)),
+        Some(v) => v.into_lua(&mut cx),
         None => {
             for _ in 0..T::Item::N.get() {
                 unsafe { zl_pushnil(L) };

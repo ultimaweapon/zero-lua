@@ -60,7 +60,7 @@ impl<P: Frame> Drop for Str<'_, P> {
     }
 }
 
-impl<'p, P: Frame> FrameState for Str<'p, P> {
+impl<P: Frame> FrameState for Str<'_, P> {
     type State = P::State;
 
     #[inline(always)]

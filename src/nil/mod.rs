@@ -29,7 +29,7 @@ impl<P: Frame> Drop for Nil<'_, P> {
     }
 }
 
-impl<'p, P: Frame> FrameState for Nil<'p, P> {
+impl<P: Frame> FrameState for Nil<'_, P> {
     type State = P::State;
 
     #[inline(always)]

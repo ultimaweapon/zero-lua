@@ -13,7 +13,7 @@ impl<'a, P: Frame> UnknownFrame<'a, P> {
     }
 }
 
-impl<'a, P: Frame> FrameState for UnknownFrame<'a, P> {
+impl<P: Frame> FrameState for UnknownFrame<'_, P> {
     type State = P::State;
 
     #[inline(always)]

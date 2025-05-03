@@ -10,9 +10,9 @@ mod frame;
 mod setter;
 
 /// Represents an unknown value on the top of stack.
-pub struct Unknown<'a, P: Frame>(&'a mut P);
+pub struct Unknown<'p, P: Frame>(&'p mut P);
 
-impl<'a, P: Frame> Unknown<'a, P> {
+impl<P: Frame> Unknown<'_, P> {
     /// # Safety
     /// Ownership of the top stack will be transferred to the returned [`Unknown`].
     #[inline(always)]
@@ -30,14 +30,14 @@ impl<'a, P: Frame> Unknown<'a, P> {
     }
 }
 
-impl<'a, P: Frame> Drop for Unknown<'a, P> {
+impl<P: Frame> Drop for Unknown<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.0.release_values(1) };
     }
 }
 
-impl<'a, P: Frame> FrameState for Unknown<'a, P> {
+impl<P: Frame> FrameState for Unknown<'_, P> {
     type State = P::State;
 
     #[inline(always)]

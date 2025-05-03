@@ -12,7 +12,7 @@ pub struct UnknownSetter<'a> {
     phantom: PhantomData<&'a ()>,
 }
 
-impl<'a> UnknownSetter<'a> {
+impl UnknownSetter<'_> {
     #[inline(always)]
     pub(super) unsafe fn new(state: *mut lua_State, index: PositiveInt) -> Self {
         Self {
