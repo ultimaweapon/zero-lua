@@ -29,6 +29,7 @@ unsafe extern "C-unwind" {
         name: *const c_char,
         chunk: *const c_char,
         len: usize,
+        mode: *const c_char,
     ) -> bool;
     pub fn zl_pcall(L: *mut lua_State, nargs: c_int, nresults: c_int, msgh: c_int) -> bool;
     pub fn zl_checkstack(L: *mut lua_State, n: c_int);

@@ -12,9 +12,9 @@ use crate::ffi::{
 };
 use crate::state::FrameState;
 use crate::{
-    Bool, Context, Error, Function, GlobalSetter, Iter, MainState, Nil, NonYieldable, PositiveInt,
-    Str, Table, TableFrame, TableGetter, TableSetter, UserData, UserType, Value, Yieldable,
-    is_boxed,
+    Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, MainState, Nil, NonYieldable,
+    PositiveInt, Str, Table, TableFrame, TableGetter, TableSetter, UserData, UserType, Value,
+    Yieldable, is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::CStr;
@@ -130,10 +130,35 @@ pub trait Frame: FrameState {
         GlobalSetter::new(self, name)
     }
 
+    fn load(
+        &mut self,
+        name: impl AsRef<CStr>,
+        ty: ChunkType,
+        chunk: impl AsRef<[u8]>,
+    ) -> Result<Function<Self>, Str<Self>> {
+        let name = name.as_ref();
+        let chunk = chunk.as_ref();
+        let mode = ty.to_c_str();
+
+        match unsafe {
+            zl_load(
+                self.state().get(),
+                name.as_ptr(),
+                chunk.as_ptr().cast(),
+                chunk.len(),
+                mode.as_ptr(),
+            )
+        } {
+            true => Ok(unsafe { Function::new(self) }),
+            false => Err(unsafe { Str::new(self) }),
+        }
+    }
+
     /// This method will load the whole content of `file` into memory before passing to Lua.
     fn load_file(
         &mut self,
         file: impl AsRef<Path>,
+        ty: ChunkType,
     ) -> Result<Result<Function<Self>, Str<Self>>, std::io::Error> {
         // Read file.
         let file = file.as_ref();
@@ -149,8 +174,16 @@ pub trait Frame: FrameState {
 
         // Load.
         let name = name.as_ptr().cast();
-        let r = match unsafe { zl_load(self.state().get(), name, data.as_ptr().cast(), data.len()) }
-        {
+        let mode = ty.to_c_str();
+        let r = match unsafe {
+            zl_load(
+                self.state().get(),
+                name,
+                data.as_ptr().cast(),
+                data.len(),
+                mode.as_ptr(),
+            )
+        } {
             true => Ok(unsafe { Function::new(self) }),
             false => Err(unsafe { Str::new(self) }),
         };

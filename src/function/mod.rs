@@ -113,3 +113,27 @@ impl<'p, P: Frame> From<Function<'p, P>> for Unknown<'p, P> {
         value.into_unknown()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{ChunkType, Lua};
+
+    #[test]
+    fn async_resume_complete_immediately() {
+        let mut lua = Lua::new(None).unwrap().into_async().spawn();
+
+        pollster::block_on(async {
+            let mut f = lua
+                .load(c"", ChunkType::Text, b"return 5")
+                .unwrap()
+                .into_async();
+            let mut r = match f.resume().await.unwrap() {
+                Async::Yield(_) => panic!("unexpected yield"),
+                Async::Finish(v) => v,
+            };
+
+            assert_eq!(r.to_int(1).unwrap(), 5);
+        });
+    }
+}

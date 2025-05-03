@@ -2,6 +2,7 @@ use crate::ffi::{zl_pop, zl_tolstring};
 use crate::state::FrameState;
 use crate::{Frame, FromOption, OptionError, Unknown};
 use std::ffi::{CStr, c_int};
+use std::fmt::{Debug, Formatter};
 use std::mem::ManuallyDrop;
 use std::ops::DerefMut;
 use std::ptr::null_mut;
@@ -71,6 +72,12 @@ impl<P: Frame> FrameState for Str<'_, P> {
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
         unsafe { zl_pop(self.state().get(), n) };
+    }
+}
+
+impl<'p, P: Frame> Debug for Str<'p, P> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("string")
     }
 }
 

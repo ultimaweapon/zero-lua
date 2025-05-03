@@ -47,6 +47,24 @@ extern crate zl_sys; // Required since no Rust code references this crate.
 
 pub type PanicHandler = dyn Fn(Option<&str>);
 
+/// Allowed chunk type to load.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ChunkType {
+    Text,
+    Binary,
+    Both,
+}
+
+impl ChunkType {
+    const fn to_c_str(self) -> &'static CStr {
+        match self {
+            Self::Text => c"t",
+            Self::Binary => c"b",
+            Self::Both => c"bt",
+        }
+    }
+}
+
 /// Encapsulates a value in the stack.
 #[non_exhaustive]
 #[repr(i32)]

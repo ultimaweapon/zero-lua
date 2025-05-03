@@ -82,9 +82,9 @@ extern "C" void zl_require_utf8(lua_State *L, bool global)
     luaL_requiref(L, LUA_UTF8LIBNAME, luaopen_utf8, global);
 }
 
-extern "C" bool zl_load(lua_State *L, const char *name, const char *chunk, size_t len)
+extern "C" bool zl_load(lua_State *L, const char *name, const char *chunk, size_t len, const char *mode)
 {
-    return luaL_loadbuffer(L, chunk, len, name) == LUA_OK;
+    return luaL_loadbufferx(L, chunk, len, name, mode) == LUA_OK;
 }
 
 extern "C" bool zl_pcall(lua_State *L, int nargs, int nresults, int msgh)

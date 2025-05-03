@@ -10,6 +10,9 @@ zl-sys = { path = "sys" }
 [build-dependencies]
 cc = "1.2.16"
 
+[dev-dependencies]
+pollster = "0.4.0"
+
 [workspace]
 members = [
     "macros",

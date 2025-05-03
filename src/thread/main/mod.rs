@@ -23,6 +23,9 @@ impl Lua {
     ///
     /// You may want to change Lua warning function after this if your application is a GUI
     /// application.
+    ///
+    /// Use [`Self::into_async()`] to convert this type to [`AsyncLua`] if you need to call into
+    /// Rust async function or Lua function that yield.
     #[inline(always)]
     pub fn new(panic: Option<Box<PanicHandler>>) -> Option<Self> {
         // Get panic handler.
