@@ -5,7 +5,7 @@ use crate::ffi::{
     zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
 };
 use crate::state::FrameState;
-use crate::{BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, UserType, is_boxed};
+use crate::{BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, UserType, Value, is_boxed};
 use std::any::TypeId;
 use std::ffi::c_int;
 use std::marker::PhantomData;
@@ -167,6 +167,15 @@ impl<'a, S: LocalState> Context<'a, S> {
         unsafe { BorrowedUd::new(self, n, ud) }
     }
 
+    /// # Panics
+    /// If `v` is zero.
+    #[inline(always)]
+    pub fn push_uv<T: UserType>(&mut self, n: PositiveInt, v: u16) -> Option<Value<Self>> {
+        self.to_ud::<T>(n);
+        unsafe { Value::from_uv(self, n.get(), v) }
+    }
+
+    #[inline(always)]
     pub(crate) fn into_results(self) -> c_int {
         self.ret
     }

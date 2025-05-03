@@ -1,6 +1,6 @@
-use crate::ffi::{zl_getiuservalue, zl_pop};
+use crate::ffi::zl_pop;
 use crate::state::FrameState;
-use crate::{Bool, Frame, Function, Nil, PositiveInt, Str, Table, Type, UserValue, Value};
+use crate::{Frame, PositiveInt, Value};
 use std::ffi::c_int;
 
 /// Encapsulates a full userdata in the stack.
@@ -22,25 +22,7 @@ impl<'a, 'b, P: Frame, T> BorrowedUd<'a, 'b, P, T> {
     /// If `n` is zero.
     #[inline(always)]
     pub fn get_user_value(&mut self, n: u16) -> Option<Value<Self>> {
-        assert!(n > 0);
-
-        let v = match unsafe { zl_getiuservalue(self.state().get(), self.index.get(), n) } {
-            Type::None => {
-                unsafe { zl_pop(self.state().get(), 1) };
-                return None;
-            }
-            Type::Nil => Value::Nil(unsafe { Nil::new(self) }),
-            Type::Boolean => Value::Boolean(unsafe { Bool::new(self) }),
-            Type::LightUserData => todo!(),
-            Type::Number => todo!(),
-            Type::String => Value::String(unsafe { Str::new(self) }),
-            Type::Table => Value::Table(unsafe { Table::new(self) }),
-            Type::Function => Value::Function(unsafe { Function::new(self) }),
-            Type::UserData => Value::UserData(unsafe { UserValue::new(self) }),
-            Type::Thread => todo!(),
-        };
-
-        Some(v)
+        unsafe { Value::from_uv(self, self.index.get(), n) }
     }
 
     #[inline(always)]

@@ -16,7 +16,7 @@ pub use self::userdata::*;
 pub use self::util::*;
 pub use zl_macros::*;
 
-use self::ffi::{zl_getmetafield, zl_pop, zl_tolstring};
+use self::ffi::{zl_getiuservalue, zl_getmetafield, zl_pop, zl_tolstring};
 use self::state::FrameState;
 use std::borrow::Cow;
 use std::ffi::{CStr, c_int};
@@ -60,6 +60,7 @@ pub enum Value<'a, P: Frame> {
 }
 
 impl<'a, P: Frame> Value<'a, P> {
+    #[inline(always)]
     pub fn ty(&self) -> Type {
         // SAFETY: Value has repr(i32).
         unsafe { transmute((self as *const Self as *const i32).read()) }
@@ -92,6 +93,7 @@ impl<'a, P: Frame> Value<'a, P> {
         Cow::Borrowed(self.ty().name())
     }
 
+    #[inline(always)]
     pub(crate) unsafe fn from_table<K: TableGetter>(p: &'a mut P, t: c_int, k: K) -> Self {
         match unsafe { k.get_value(p.state().get(), t) } {
             Type::None => unreachable!(),
@@ -105,6 +107,29 @@ impl<'a, P: Frame> Value<'a, P> {
             Type::UserData => Self::UserData(unsafe { UserValue::new(p) }),
             Type::Thread => todo!(),
         }
+    }
+
+    #[inline(always)]
+    pub(crate) unsafe fn from_uv(p: &'a mut P, d: c_int, v: u16) -> Option<Self> {
+        assert!(v > 0);
+
+        let v = match unsafe { zl_getiuservalue(p.state().get(), d, v) } {
+            Type::None => {
+                unsafe { zl_pop(p.state().get(), 1) };
+                return None;
+            }
+            Type::Nil => Value::Nil(unsafe { Nil::new(p) }),
+            Type::Boolean => Value::Boolean(unsafe { Bool::new(p) }),
+            Type::LightUserData => todo!(),
+            Type::Number => todo!(),
+            Type::String => Value::String(unsafe { Str::new(p) }),
+            Type::Table => Value::Table(unsafe { Table::new(p) }),
+            Type::Function => Value::Function(unsafe { Function::new(p) }),
+            Type::UserData => Value::UserData(unsafe { UserValue::new(p) }),
+            Type::Thread => todo!(),
+        };
+
+        Some(v)
     }
 }
 
