@@ -11,6 +11,8 @@ mod borrowed;
 mod frame;
 mod value;
 
+pub(crate) const TYPE_ID: &CStr = c"typeid";
+
 /// Strongly typed full userdata.
 ///
 /// Note that the type that implement this trait **must** be register (see [`Frame::register_ud()`])
@@ -23,11 +25,11 @@ pub trait UserType: RefUnwindSafe + 'static {
         None
     }
 
-    /// Setup a metatable for this type. This is your only chance to access type's metatable.
+    /// Setup this type. This is your only chance to access type's metatable.
     ///
-    /// Note that Zero Lua will overwrite the value of `typeid` and `__gc` after this.
+    /// Note that Zero Lua will panic if `meta` contains either `typeid` and `__gc` after this.
     #[inline(always)]
-    fn setup_metatable<P: Frame>(meta: &mut Table<P>) {
+    fn setup<P: Frame>(meta: &mut Table<P>) {
         let _ = meta;
     }
 

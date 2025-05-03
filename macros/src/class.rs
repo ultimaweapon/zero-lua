@@ -195,7 +195,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
     // Compose.
     if !meta.is_empty() {
         meta = quote! {
-            fn setup_metatable<P: ::zl::Frame>(meta: &mut ::zl::Table<P>) {
+            fn setup<P: ::zl::Frame>(meta: &mut ::zl::Table<P>) {
                 use ::zl::Frame;
                 #meta
             }

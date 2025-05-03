@@ -5,18 +5,18 @@ use self::function::invoker;
 use self::userdata::{finalizer, push_metatable};
 use crate::convert::IntoLua;
 use crate::ffi::{
-    ZL_REGISTRYINDEX, zl_checkstack, zl_createtable, zl_load, zl_newmetatable, zl_newuserdatauv,
-    zl_pop, zl_pushboolean, zl_pushcclosure, zl_pushlstring, zl_pushnil, zl_require_base,
-    zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os, zl_require_string,
-    zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
+    ZL_REGISTRYINDEX, zl_checkstack, zl_createtable, zl_getfield, zl_load, zl_newmetatable,
+    zl_newuserdatauv, zl_pop, zl_pushboolean, zl_pushcclosure, zl_pushlstring, zl_pushnil,
+    zl_require_base, zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os,
+    zl_require_string, zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
 };
 use crate::state::FrameState;
 use crate::{
     Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, MainState, Nil, NonYieldable,
-    PositiveInt, Str, Table, TableFrame, TableGetter, TableSetter, UserData, UserType, Value,
-    Yieldable, is_boxed,
+    PositiveInt, Str, TYPE_ID, Table, TableFrame, TableGetter, TableSetter, Type, UserData,
+    UserType, Value, Yieldable, is_boxed,
 };
-use std::any::TypeId;
+use std::any::{TypeId, type_name};
 use std::ffi::CStr;
 use std::iter::Fuse;
 use std::mem::ManuallyDrop;
@@ -40,18 +40,46 @@ pub trait Frame: FrameState {
     where
         Self: FrameState<State = MainState>,
     {
+        // Check if exists.
         if unsafe { zl_newmetatable(self.state().get(), T::name().as_ptr()) == 0 } {
             unsafe { zl_pop(self.state().get(), 1) };
             return false;
         }
 
-        T::setup_metatable(&mut ManuallyDrop::new(unsafe { Table::new(self) }));
+        T::setup(&mut ManuallyDrop::new(unsafe { Table::new(self) }));
+
+        // Check if user supplied typeid.
+        match unsafe { zl_getfield(self.state().get(), -1, TYPE_ID.as_ptr()) } {
+            Type::Nil => unsafe { zl_pop(self.state().get(), 1) },
+            _ => unsafe {
+                zl_pop(self.state().get(), 2);
+
+                panic!(
+                    "UserType::setup() implementation on {} put a reserved '{}' to metatable",
+                    type_name::<T>(),
+                    TYPE_ID.to_string_lossy()
+                );
+            },
+        }
+
+        // Check if user supplied __gc.
+        match unsafe { zl_getfield(self.state().get(), -1, c"__gc".as_ptr()) } {
+            Type::Nil => unsafe { zl_pop(self.state().get(), 1) },
+            _ => unsafe {
+                zl_pop(self.state().get(), 2);
+
+                panic!(
+                    "UserType::setup() implementation on {} put a reserved '__gc' to metatable",
+                    type_name::<T>(),
+                );
+            },
+        }
 
         // Set "typeid".
         let ud = unsafe { zl_newuserdatauv(self.state().get(), size_of::<TypeId>(), 0) };
 
         unsafe { ud.cast::<TypeId>().write_unaligned(TypeId::of::<T>()) };
-        unsafe { zl_setfield(self.state().get(), -2, c"typeid".as_ptr()) };
+        unsafe { zl_setfield(self.state().get(), -2, TYPE_ID.as_ptr()) };
 
         // Set finalizer.
         if is_boxed::<T>() {
