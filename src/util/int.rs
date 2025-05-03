@@ -8,6 +8,7 @@ pub struct PositiveInt(NonZero<c_int>);
 
 impl PositiveInt {
     pub const ONE: Self = Self::new(1).unwrap();
+    pub const TWO: Self = Self::new(2).unwrap();
 
     pub const fn new(v: c_int) -> Option<Self> {
         let v = match NonZero::new(v) {
