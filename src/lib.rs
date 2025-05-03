@@ -56,7 +56,7 @@ pub enum Value<'a, P: Frame> {
     String(Str<'a, P>) = 4,
     Table(Table<'a, P>) = 5,
     Function(Function<'a, P>) = 6,
-    UserData(UserValue<'a, P>) = 7,
+    UserData(UserData<'a, P>) = 7,
 }
 
 impl<'a, P: Frame> Value<'a, P> {
@@ -104,7 +104,7 @@ impl<'a, P: Frame> Value<'a, P> {
             Type::String => Self::String(unsafe { Str::new(p) }),
             Type::Table => Self::Table(unsafe { Table::new(p) }),
             Type::Function => Self::Function(unsafe { Function::new(p) }),
-            Type::UserData => Self::UserData(unsafe { UserValue::new(p) }),
+            Type::UserData => Self::UserData(unsafe { UserData::new(p) }),
             Type::Thread => todo!(),
         }
     }
@@ -125,7 +125,7 @@ impl<'a, P: Frame> Value<'a, P> {
             Type::String => Value::String(unsafe { Str::new(p) }),
             Type::Table => Value::Table(unsafe { Table::new(p) }),
             Type::Function => Value::Function(unsafe { Function::new(p) }),
-            Type::UserData => Value::UserData(unsafe { UserValue::new(p) }),
+            Type::UserData => Value::UserData(unsafe { UserData::new(p) }),
             Type::Thread => todo!(),
         };
 

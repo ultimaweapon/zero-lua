@@ -13,7 +13,7 @@ use crate::ffi::{
 use crate::state::FrameState;
 use crate::{
     Bool, Context, Error, Function, GlobalSetter, Iter, MainState, Nil, NonYieldable, PositiveInt,
-    Str, Table, TableFrame, TableGetter, TableSetter, UserType, UserValue, Value, Yieldable,
+    Str, Table, TableFrame, TableGetter, TableSetter, UserData, UserType, Value, Yieldable,
     is_boxed,
 };
 use std::any::TypeId;
@@ -232,7 +232,7 @@ pub trait Frame: FrameState {
 
     /// # Panics
     /// If `T` was not registered with [`Frame::register_ud()`].
-    fn push_ud<T: UserType>(&mut self, v: T) -> UserValue<Self> {
+    fn push_ud<T: UserType>(&mut self, v: T) -> UserData<Self> {
         // Create userdata.
         let nuvalue = T::user_values().map(|v| v.get()).unwrap_or(0).into();
 
@@ -250,7 +250,7 @@ pub trait Frame: FrameState {
         unsafe { push_metatable::<T>(self.state().get()) };
         unsafe { zl_setmetatable(self.state().get(), -2) };
 
-        unsafe { UserValue::new(self) }
+        unsafe { UserData::new(self) }
     }
 
     /// See [`Context`] for how to return some values to Lua.

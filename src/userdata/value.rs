@@ -7,9 +7,9 @@ use std::mem::ManuallyDrop;
 use std::ops::DerefMut;
 
 /// Represents a user data on the top of stack.
-pub struct UserValue<'p, P: Frame>(&'p mut P);
+pub struct UserData<'p, P: Frame>(&'p mut P);
 
-impl<'p, P: Frame> UserValue<'p, P> {
+impl<'p, P: Frame> UserData<'p, P> {
     /// # Safety
     /// Top of the stack must be a strongly typed user data.
     #[inline(always)]
@@ -33,14 +33,14 @@ impl<'p, P: Frame> UserValue<'p, P> {
     }
 }
 
-impl<P: Frame> Drop for UserValue<'_, P> {
+impl<P: Frame> Drop for UserData<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.0.release_values(1) };
     }
 }
 
-impl<P: Frame> FrameState for UserValue<'_, P> {
+impl<P: Frame> FrameState for UserData<'_, P> {
     type State = P::State;
 
     #[inline(always)]
@@ -54,9 +54,9 @@ impl<P: Frame> FrameState for UserValue<'_, P> {
     }
 }
 
-impl<'p, P: Frame> From<UserValue<'p, P>> for Unknown<'p, P> {
+impl<'p, P: Frame> From<UserData<'p, P>> for Unknown<'p, P> {
     #[inline(always)]
-    fn from(value: UserValue<'p, P>) -> Self {
+    fn from(value: UserData<'p, P>) -> Self {
         value.into_unknown()
     }
 }
