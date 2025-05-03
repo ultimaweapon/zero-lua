@@ -1,6 +1,7 @@
 use super::TableSetter;
+use crate::Frame;
 use crate::ffi::{zl_pop, zl_replace};
-use crate::{Frame, FrameState};
+use crate::state::FrameState;
 use std::ffi::c_int;
 
 /// Provides [`Frame`] implementation to set a table value.

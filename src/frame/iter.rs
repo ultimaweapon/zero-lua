@@ -1,5 +1,6 @@
+use crate::convert::IntoLua;
 use crate::ffi::{lua_State, zl_pushnil, zl_touserdata};
-use crate::{Context, FrameValue, IntoLua, NonYieldable};
+use crate::{Context, NonYieldable};
 use std::ffi::c_int;
 use std::iter::FusedIterator;
 
@@ -14,7 +15,7 @@ where
     match iter.next() {
         Some(v) => drop(v.into_lua(&mut cx)),
         None => {
-            for _ in 0..<T::Item as IntoLua>::Value::<'_, Context>::N.get() {
+            for _ in 0..T::Item::N.get() {
                 unsafe { zl_pushnil(L) };
             }
         }

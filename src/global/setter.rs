@@ -1,5 +1,6 @@
+use crate::Frame;
 use crate::ffi::{zl_pop, zl_replace, zl_setglobal};
-use crate::{Frame, FrameState};
+use crate::state::FrameState;
 use std::ffi::{CStr, c_int};
 
 /// Provides [`Frame`] implementation to set a global value.

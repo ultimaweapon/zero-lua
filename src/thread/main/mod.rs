@@ -2,8 +2,8 @@ pub(crate) use self::state::*;
 
 use super::AsyncLua;
 use crate::ffi::{lua_State, zl_atpanic, zl_getextraspace, zl_pop, zl_tolstring, zl_type};
-use crate::state::ExtraData;
-use crate::{FrameState, PanicHandler, Type};
+use crate::state::{ExtraData, FrameState};
+use crate::{PanicHandler, Type};
 use std::backtrace::Backtrace;
 use std::ffi::c_int;
 use std::pin::Pin;

@@ -4,9 +4,8 @@ use crate::ffi::{
     zl_argerror, zl_checklstring, zl_error, zl_getfield, zl_getmetatable, zl_isnil, zl_istable,
     zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
 };
-use crate::{
-    BorrowedTable, BorrowedUd, Error, ErrorKind, FrameState, PositiveInt, UserData, is_boxed,
-};
+use crate::state::FrameState;
+use crate::{BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, UserData, is_boxed};
 use std::any::TypeId;
 use std::ffi::c_int;
 use std::marker::PhantomData;

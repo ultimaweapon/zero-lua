@@ -1,6 +1,7 @@
 use super::TableGetter;
 use crate::ffi::zl_pop;
-use crate::{Frame, FrameState, PositiveInt, Value};
+use crate::state::FrameState;
+use crate::{Frame, PositiveInt, Value};
 use std::ffi::c_int;
 
 /// Encapsulates a table in the stack.

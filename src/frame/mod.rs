@@ -1,19 +1,20 @@
-pub(crate) use self::state::*;
 pub use self::r#yield::*;
 
 use self::r#async::async_invoker;
 use self::function::invoker;
 use self::userdata::{finalizer, push_metatable};
+use crate::convert::IntoLua;
 use crate::ffi::{
     ZL_REGISTRYINDEX, zl_checkstack, zl_createtable, zl_load, zl_newmetatable, zl_newuserdatauv,
     zl_pop, zl_pushboolean, zl_pushcclosure, zl_pushlstring, zl_pushnil, zl_require_base,
     zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os, zl_require_string,
     zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
 };
+use crate::state::FrameState;
 use crate::{
-    Bool, Context, Error, Function, GlobalSetter, IntoLua, Iter, MainState, Nil, NonYieldable,
-    PositiveInt, Str, Table, TableFrame, TableGetter, TableSetter, UserData, UserValue, Value,
-    Yieldable, is_boxed,
+    Bool, Context, Error, Function, GlobalSetter, Iter, MainState, Nil, NonYieldable, PositiveInt,
+    Str, Table, TableFrame, TableGetter, TableSetter, UserData, UserValue, Value, Yieldable,
+    is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::CStr;
@@ -25,16 +26,15 @@ use std::path::Path;
 mod r#async;
 mod function;
 mod iter;
-mod state;
 mod userdata;
 mod r#yield;
 
 /// Virtual frame in a Lua stack.
 ///
-/// Some methods in this trait can raise a C++ exception. When calling outside Lua runtime it will
-/// cause the process to terminate. Inside Lua runtime it will report as Lua error.
+/// Some methods in this trait can raise a Lua error. When calling outside Lua runtime it will
+/// trigger Lua panic, which terminate the process.
 pub trait Frame: FrameState {
-    /// Returns `true` if `T` was successfully registered or `false` if the other user data with the
+    /// Returns `true` if `T` was successfully registered or `false` if the other userdata with the
     /// same name already registered.
     fn register_ud<T: UserData>(&mut self) -> bool
     where

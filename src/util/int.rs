@@ -18,6 +18,12 @@ impl PositiveInt {
         if v.get() > 0 { Some(Self(v)) } else { None }
     }
 
+    /// # Safety
+    /// `v` must be positive.
+    pub const unsafe fn new_unchecked(v: c_int) -> Self {
+        Self(unsafe { NonZero::new_unchecked(v) })
+    }
+
     pub const fn get(self) -> c_int {
         self.0.get()
     }

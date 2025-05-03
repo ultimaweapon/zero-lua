@@ -1,5 +1,6 @@
+use crate::Frame;
 use crate::ffi::{zl_pop, zl_replace, zl_setiuservalue};
-use crate::{Frame, FrameState};
+use crate::state::FrameState;
 use std::ffi::c_int;
 use std::num::NonZero;
 

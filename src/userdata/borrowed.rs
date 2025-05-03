@@ -1,7 +1,6 @@
 use crate::ffi::{zl_getiuservalue, zl_pop};
-use crate::{
-    Bool, Frame, FrameState, Function, Nil, PositiveInt, Str, Table, Type, UserValue, Value,
-};
+use crate::state::FrameState;
+use crate::{Bool, Frame, Function, Nil, PositiveInt, Str, Table, Type, UserValue, Value};
 use std::ffi::c_int;
 
 /// Encapsulates a full userdata in the stack.

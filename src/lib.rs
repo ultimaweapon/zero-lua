@@ -11,11 +11,13 @@ pub use self::string::*;
 pub use self::table::*;
 pub use self::thread::*;
 pub use self::ty::*;
+pub use self::unknown::*;
 pub use self::userdata::*;
 pub use self::util::*;
 pub use zl_macros::*;
 
 use self::ffi::{zl_getmetafield, zl_pop, zl_tolstring};
+use self::state::FrameState;
 use std::borrow::Cow;
 use std::ffi::{CStr, c_int};
 use std::mem::transmute;
@@ -23,6 +25,7 @@ use std::ptr::null_mut;
 
 mod boolean;
 mod context;
+mod convert;
 mod error;
 mod ffi;
 mod frame;
@@ -36,6 +39,7 @@ mod string;
 mod table;
 mod thread;
 mod ty;
+mod unknown;
 mod userdata;
 mod util;
 
@@ -100,63 +104,6 @@ impl<'a, P: Frame> Value<'a, P> {
             Type::Function => Self::Function(unsafe { Function::new(p) }),
             Type::UserData => Self::UserData(unsafe { UserValue::new(p) }),
             Type::Thread => todo!(),
-        }
-    }
-}
-
-/// Type can be converted to Lua value.
-///
-/// The purpose of this trait is to provide automatic conversion where manually push is not
-/// possible.
-pub trait IntoLua {
-    type Value<'a, P: Frame + 'a>: FrameValue<'a, P>;
-
-    /// # Panics
-    /// This method may panic if prerequisites for the value is not satisfied.
-    fn into_lua<P: Frame>(self, p: &mut P) -> Self::Value<'_, P>;
-}
-
-impl IntoLua for bool {
-    type Value<'a, P: Frame + 'a> = Bool<'a, P>;
-
-    #[inline(always)]
-    fn into_lua<P: Frame>(self, p: &mut P) -> Self::Value<'_, P> {
-        p.push_bool(self)
-    }
-}
-
-impl IntoLua for &str {
-    type Value<'a, P: Frame + 'a> = Str<'a, P>;
-
-    #[inline(always)]
-    fn into_lua<P: Frame>(self, p: &mut P) -> Self::Value<'_, P> {
-        p.push_str(self)
-    }
-}
-
-impl IntoLua for &[u8] {
-    type Value<'a, P: Frame + 'a> = Str<'a, P>;
-
-    #[inline(always)]
-    fn into_lua<P: Frame>(self, p: &mut P) -> Self::Value<'_, P> {
-        p.push_str(self)
-    }
-}
-
-impl<T: IntoLua> IntoLua for Option<T> {
-    type Value<'a, P: Frame + 'a> = Nilable<'a, T::Value<'a, P>, P>;
-
-    #[inline(always)]
-    fn into_lua<P: Frame>(self, p: &mut P) -> Self::Value<'_, P> {
-        match self {
-            Some(v) => Nilable::Value(v.into_lua(p)),
-            None => {
-                for _ in 0..<T::Value<'_, P> as FrameValue<P>>::N.get() {
-                    p.push_nil();
-                }
-
-                Nilable::Nil(p)
-            }
         }
     }
 }

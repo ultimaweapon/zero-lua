@@ -12,6 +12,9 @@ mod frame;
 mod value;
 
 /// Strongly typed full userdata.
+///
+/// Note that the type that implement this trait **must** be register (see [`Frame::register_ud()`])
+/// before its value can be pushed into Lua.
 pub trait UserData: RefUnwindSafe + 'static {
     fn name() -> &'static CStr;
 
