@@ -4,6 +4,7 @@ use syn::{Error, Item, ItemEnum, ItemImpl, parse_macro_input};
 mod class;
 mod derive;
 
+/// Generate a Lua class from `impl` block.
 #[proc_macro_attribute]
 pub fn class(arg: TokenStream, item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as ItemImpl);

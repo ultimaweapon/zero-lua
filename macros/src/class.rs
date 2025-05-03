@@ -130,7 +130,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
             }
             FnType::Close => {
                 close = quote! {
-                    t.set(c"__close").push_fn(Self::#ident);
+                    meta.set(c"__close").push_fn(Self::#ident);
                 }
             }
         }
@@ -143,8 +143,8 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
 
     if !index.is_empty() {
         meta.extend(quote! {
-            t.set(c"__index").push_fn(|cx| {
-                let n = cx.to_str(2);
+            meta.set(c"__index").push_fn(|cx| {
+                let n = cx.to_str(::zl::PositiveInt::TWO);
 
                 match n {
                     #index
@@ -178,6 +178,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
             let name = LitCStr::new(&name, Span::call_site());
 
             quote! {
+                #[inline(always)]
                 fn name() -> &'static ::core::ffi::CStr {
                     #name
                 }
@@ -194,7 +195,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
     // Compose.
     if !meta.is_empty() {
         meta = quote! {
-            fn setup_metatable<P: ::zl::Frame>(t: &mut ::zl::Table<P>) {
+            fn setup_metatable<P: ::zl::Frame>(meta: &mut ::zl::Table<P>) {
                 use ::zl::Frame;
                 #meta
             }

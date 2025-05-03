@@ -23,12 +23,12 @@ pub trait UserType: RefUnwindSafe + 'static {
         None
     }
 
-    /// Setup a metatable for the type. This is your only chance to access type's metatable.
+    /// Setup a metatable for this type. This is your only chance to access type's metatable.
     ///
     /// Note that Zero Lua will overwrite the value of `typeid` and `__gc` after this.
     #[inline(always)]
-    fn setup_metatable<P: Frame>(t: &mut Table<P>) {
-        let _ = t;
+    fn setup_metatable<P: Frame>(meta: &mut Table<P>) {
+        let _ = meta;
     }
 
     #[inline(always)]
