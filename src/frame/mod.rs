@@ -65,7 +65,7 @@ pub trait Frame: FrameState {
         unsafe { zl_pop(self.state().get(), 1) };
 
         // Add to global.
-        T::setup_global(GlobalSetter::new(self, T::name()));
+        T::register(GlobalSetter::new(self, T::name()));
 
         true
     }

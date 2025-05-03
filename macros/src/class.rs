@@ -160,7 +160,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
     let glob = match glob_len {
         0 => TokenStream::new(),
         n => quote! {
-            fn setup_global<P: ::zl::Frame>(mut g: ::zl::GlobalSetter<P, &::core::ffi::CStr>) {
+            fn register<P: ::zl::Frame>(mut g: ::zl::GlobalSetter<P, &::core::ffi::CStr>) {
                 use ::zl::Frame;
 
                 let mut t = g.push_table(0, #n);

@@ -32,7 +32,7 @@ pub trait UserType: RefUnwindSafe + 'static {
     }
 
     #[inline(always)]
-    fn setup_global<P: Frame>(g: GlobalSetter<P, &CStr>) {
+    fn register<P: Frame>(g: GlobalSetter<P, &CStr>) {
         let _ = g;
     }
 }
