@@ -26,8 +26,8 @@ pub fn derive_from_option(item: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(UserData)]
-pub fn derive_user_data(item: TokenStream) -> TokenStream {
+#[proc_macro_derive(UserType)]
+pub fn derive_user_type(item: TokenStream) -> TokenStream {
     let item = parse_macro_input!(item as Item);
 
     self::derive::user_data(item)

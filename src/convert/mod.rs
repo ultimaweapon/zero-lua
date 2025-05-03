@@ -1,4 +1,4 @@
-use crate::{Frame, PositiveInt, UserData};
+use crate::{Frame, PositiveInt, UserType};
 
 /// Type can be converted to Lua value.
 ///
@@ -42,7 +42,7 @@ unsafe impl IntoLua for &[u8] {
     }
 }
 
-unsafe impl<T: UserData> IntoLua for T {
+unsafe impl<T: UserType> IntoLua for T {
     const N: PositiveInt = PositiveInt::new(1).unwrap();
 
     #[inline(always)]

@@ -13,7 +13,7 @@ use crate::ffi::{
 use crate::state::FrameState;
 use crate::{
     Bool, Context, Error, Function, GlobalSetter, Iter, MainState, Nil, NonYieldable, PositiveInt,
-    Str, Table, TableFrame, TableGetter, TableSetter, UserData, UserValue, Value, Yieldable,
+    Str, Table, TableFrame, TableGetter, TableSetter, UserType, UserValue, Value, Yieldable,
     is_boxed,
 };
 use std::any::TypeId;
@@ -36,7 +36,7 @@ mod r#yield;
 pub trait Frame: FrameState {
     /// Returns `true` if `T` was successfully registered or `false` if the other userdata with the
     /// same name already registered.
-    fn register_ud<T: UserData>(&mut self) -> bool
+    fn register_ud<T: UserType>(&mut self) -> bool
     where
         Self: FrameState<State = MainState>,
     {
@@ -232,7 +232,7 @@ pub trait Frame: FrameState {
 
     /// # Panics
     /// If `T` was not registered with [`Frame::register_ud()`].
-    fn push_ud<T: UserData>(&mut self, v: T) -> UserValue<Self> {
+    fn push_ud<T: UserType>(&mut self, v: T) -> UserValue<Self> {
         // Create userdata.
         let nuvalue = T::user_values().map(|v| v.get()).unwrap_or(0).into();
 

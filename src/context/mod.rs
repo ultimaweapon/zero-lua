@@ -5,7 +5,7 @@ use crate::ffi::{
     zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
 };
 use crate::state::FrameState;
-use crate::{BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, UserData, is_boxed};
+use crate::{BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, UserType, is_boxed};
 use std::any::TypeId;
 use std::ffi::c_int;
 use std::marker::PhantomData;
@@ -132,7 +132,7 @@ impl<'a, S: LocalState> Context<'a, S> {
         Some(unsafe { BorrowedTable::new(self, n) })
     }
 
-    pub fn to_ud<T: UserData>(&mut self, n: PositiveInt) -> BorrowedUd<'_, 'a, Self, T> {
+    pub fn to_ud<T: UserType>(&mut self, n: PositiveInt) -> BorrowedUd<'_, 'a, Self, T> {
         if n > self.args {
             // lua_touserdata require a valid index so we need to emulate luaL_checkudata behavior
             // in this case.

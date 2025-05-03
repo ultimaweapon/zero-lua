@@ -15,7 +15,7 @@ mod value;
 ///
 /// Note that the type that implement this trait **must** be register (see [`Frame::register_ud()`])
 /// before its value can be pushed into Lua.
-pub trait UserData: RefUnwindSafe + 'static {
+pub trait UserType: RefUnwindSafe + 'static {
     fn name() -> &'static CStr;
 
     #[inline(always)]
@@ -37,6 +37,6 @@ pub trait UserData: RefUnwindSafe + 'static {
     }
 }
 
-pub(crate) const fn is_boxed<T: UserData>() -> bool {
+pub(crate) const fn is_boxed<T: UserType>() -> bool {
     align_of::<T>() > align_of::<*mut ()>()
 }

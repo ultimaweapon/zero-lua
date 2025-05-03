@@ -1,5 +1,5 @@
 use crate::ffi::{lua_State, zl_getfield, zl_globalmetatable, zl_pop, zl_touserdata};
-use crate::{Type, UserData};
+use crate::{Type, UserType};
 use std::any::{TypeId, type_name};
 use std::ffi::c_int;
 
@@ -15,7 +15,7 @@ where
 /// # Panics
 /// If `T` is not registered.
 #[inline(never)]
-pub unsafe fn push_metatable<T: UserData>(#[allow(non_snake_case)] L: *mut lua_State) {
+pub unsafe fn push_metatable<T: UserType>(#[allow(non_snake_case)] L: *mut lua_State) {
     // Get metatable.
     match unsafe { zl_globalmetatable(L, T::name().as_ptr()) } {
         Type::Nil => panic!("{} is not registered", type_name::<T>()),

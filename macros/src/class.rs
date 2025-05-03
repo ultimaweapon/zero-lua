@@ -204,7 +204,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
     Ok(quote! {
         #item
 
-        impl ::zl::UserData for #ident {
+        impl ::zl::UserType for #ident {
             #name
             #meta
             #glob

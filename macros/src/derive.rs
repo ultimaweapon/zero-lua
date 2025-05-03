@@ -20,7 +20,7 @@ pub fn user_data(item: Item) -> syn::Result<TokenStream> {
 
     // Compose.
     Ok(quote! {
-        impl ::zl::UserData for #ident {
+        impl ::zl::UserType for #ident {
             fn name() -> &'static ::core::ffi::CStr {
                 static NAME: ::std::sync::LazyLock<::std::ffi::CString> = ::std::sync::LazyLock::new(|| ::std::ffi::CString::new(::std::any::type_name::<#ident>()).unwrap());
                 NAME.as_c_str()
