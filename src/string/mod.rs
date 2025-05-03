@@ -75,7 +75,7 @@ impl<P: Frame> FrameState for Str<'_, P> {
     }
 }
 
-impl<'p, P: Frame> Debug for Str<'p, P> {
+impl<P: Frame> Debug for Str<'_, P> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("string")
     }
