@@ -22,6 +22,7 @@ use std::iter::Fuse;
 use std::mem::ManuallyDrop;
 use std::panic::RefUnwindSafe;
 use std::path::Path;
+use std::ptr::null;
 
 mod r#async;
 mod function;
@@ -158,20 +159,26 @@ pub trait Frame: FrameState {
         GlobalSetter::new(self, name)
     }
 
+    /// Load a Lua chunk (AKA Lua code).
+    ///
+    /// This method use
+    /// [luaL_loadbufferx](https://www.lua.org/manual/5.4/manual.html#luaL_loadbufferx) to load the
+    /// chunk.
+    #[inline(always)]
     fn load(
         &mut self,
-        name: impl AsRef<CStr>,
+        name: Option<&CStr>,
         ty: ChunkType,
         chunk: impl AsRef<[u8]>,
     ) -> Result<Function<Self>, Str<Self>> {
-        let name = name.as_ref();
+        let name = name.map(|v| v.as_ptr()).unwrap_or(null());
         let chunk = chunk.as_ref();
         let mode = ty.to_c_str();
 
         match unsafe {
             zl_load(
                 self.state().get(),
-                name.as_ptr(),
+                name,
                 chunk.as_ptr().cast(),
                 chunk.len(),
                 mode.as_ptr(),
@@ -182,7 +189,10 @@ pub trait Frame: FrameState {
         }
     }
 
-    /// This method will load the whole content of `file` into memory before passing to Lua.
+    /// Load a Lua chunk (AKA Lua code) from a file.
+    ///
+    /// Note that this method will load the whole content of `file` into memory before passing to
+    /// Lua.
     fn load_file(
         &mut self,
         file: impl AsRef<Path>,
@@ -200,23 +210,11 @@ pub trait Frame: FrameState {
         name.push_str(&file);
         name.push('\0');
 
-        // Load.
-        let name = name.as_ptr().cast();
-        let mode = ty.to_c_str();
-        let r = match unsafe {
-            zl_load(
-                self.state().get(),
-                name,
-                data.as_ptr().cast(),
-                data.len(),
-                mode.as_ptr(),
-            )
-        } {
-            true => Ok(unsafe { Function::new(self) }),
-            false => Err(unsafe { Str::new(self) }),
-        };
+        // SAFETY: We use CStr::from_ptr() instead of CStr::from_bytes_with_nul_unchecked() since
+        // file path may contains interior NUL.
+        let name = unsafe { CStr::from_ptr(name.as_ptr().cast()) };
 
-        Ok(r)
+        Ok(self.load(Some(name), ty, data))
     }
 
     #[inline(always)]
@@ -416,3 +414,16 @@ pub trait Frame: FrameState {
 }
 
 impl<T: FrameState> Frame for T {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Lua;
+
+    #[test]
+    fn load_ok() {
+        let mut lua = Lua::new(None).unwrap();
+
+        lua.load(None, ChunkType::Text, "return 7").unwrap();
+    }
+}

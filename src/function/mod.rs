@@ -125,7 +125,7 @@ mod tests {
 
         pollster::block_on(async {
             let mut f = lua
-                .load(c"", ChunkType::Text, b"return 5")
+                .load(None, ChunkType::Text, b"return 5")
                 .unwrap()
                 .into_async();
             let mut r = match f.resume().await.unwrap() {
