@@ -12,8 +12,8 @@ use crate::ffi::{
 };
 use crate::state::FrameState;
 use crate::{
-    Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, Nil, NonYieldable, PositiveInt,
-    Str, TYPE_ID, Table, TableFrame, TableGetter, TableSetter, Type, UserData, UserType, Value,
+    Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, Nil, NonYieldable, OwnedUd,
+    PositiveInt, Str, TYPE_ID, Table, TableFrame, TableGetter, TableSetter, Type, UserType, Value,
     Yieldable, is_boxed,
 };
 use std::any::{TypeId, type_name};
@@ -291,25 +291,28 @@ pub trait Frame: FrameState {
 
     /// # Panics
     /// If `T` was not registered with [`Frame::register_ud()`].
-    fn push_ud<T: UserType>(&mut self, v: T) -> UserData<Self> {
+    fn push_ud<T: UserType>(&mut self, v: T) -> OwnedUd<Self, T> {
         // Create userdata.
         let nuvalue = T::user_values().map(|v| v.get()).unwrap_or(0).into();
-
-        if is_boxed::<T>() {
+        let ptr = if is_boxed::<T>() {
             let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<T>>(), nuvalue) };
+            let ptr = ptr.cast::<Box<T>>();
 
-            unsafe { ptr.cast::<Box<T>>().write(v.into()) };
+            unsafe { ptr.write(v.into()) };
+            unsafe { (*ptr).as_ref() as *const T }
         } else {
             let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<T>(), nuvalue) };
+            let ptr = ptr.cast::<T>();
 
-            unsafe { ptr.cast::<T>().write(v) };
-        }
+            unsafe { ptr.write(v) };
+            ptr
+        };
 
         // Set metatable.
         unsafe { push_metatable::<T>(self.state().get()) };
         unsafe { zl_setmetatable(self.state().get(), -2) };
 
-        unsafe { UserData::new(self) }
+        unsafe { OwnedUd::new(self, ptr) }
     }
 
     /// See [`Context`] for how to return some values to Lua.

@@ -1,5 +1,6 @@
 pub use self::boolean::*;
 pub use self::context::*;
+pub use self::convert::*;
 pub use self::error::*;
 pub use self::frame::*;
 pub use self::function::*;
@@ -129,8 +130,6 @@ impl<'a, P: Frame> Value<'a, P> {
 
     #[inline(always)]
     pub(crate) unsafe fn from_uv(p: &'a mut P, d: c_int, v: u16) -> Option<Self> {
-        assert!(v > 0);
-
         let v = match unsafe { zl_getiuservalue(p.state().get(), d, v) } {
             Type::None => {
                 unsafe { zl_pop(p.state().get(), 1) };

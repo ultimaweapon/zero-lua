@@ -1,14 +1,17 @@
 pub use self::state::*;
 
 use crate::ffi::{
-    zl_argerror, zl_checklstring, zl_error, zl_getfield, zl_getmetatable, zl_isnil, zl_istable,
-    zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
+    zl_argerror, zl_checklstring, zl_error, zl_getfield, zl_getiuservalue, zl_getmetatable,
+    zl_isnil, zl_istable, zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
 };
 use crate::state::FrameState;
-use crate::{BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, UserType, Value, is_boxed};
+use crate::{
+    BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, TYPE_ID, UserType, is_boxed,
+};
 use std::any::TypeId;
 use std::ffi::c_int;
 use std::marker::PhantomData;
+use std::num::NonZero;
 
 mod state;
 
@@ -146,7 +149,7 @@ impl<'a, S: LocalState> Context<'a, S> {
             unsafe { zl_typeerror(self.state.get(), n.get(), T::name().as_ptr()) };
         }
 
-        unsafe { zl_getfield(self.state.get(), -1, c"typeid".as_ptr()) };
+        unsafe { zl_getfield(self.state.get(), -1, TYPE_ID.as_ptr()) };
 
         // SAFETY: TypeId is Copy.
         let id = TypeId::of::<T>();
@@ -167,12 +170,13 @@ impl<'a, S: LocalState> Context<'a, S> {
         unsafe { BorrowedUd::new(self, n, ud) }
     }
 
-    /// # Panics
-    /// If `v` is zero.
+    /// This method was designed to return a user value to Lua. Use [`Self::to_ud()`] then
+    /// [`BorrowedUd::get_user_value()`] if you want to access the user value on Rust.
     #[inline(always)]
-    pub fn push_uv<T: UserType>(&mut self, n: PositiveInt, v: u16) -> Option<Value<Self>> {
-        self.to_ud::<T>(n);
-        unsafe { Value::from_uv(self, n.get(), v) }
+    pub fn push_uv<T: UserType>(&mut self, ud: PositiveInt, uv: NonZero<u16>) {
+        self.to_ud::<T>(ud);
+        unsafe { zl_getiuservalue(self.state.get(), ud.get(), uv.get()) };
+        self.ret += 1;
     }
 
     #[inline(always)]

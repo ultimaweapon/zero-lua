@@ -7,17 +7,19 @@ use std::num::NonZero;
 /// Provides [`Frame`] implementation to set a user value.
 pub struct UserFrame<'a, P: Frame> {
     parent: &'a mut P,
+    ud: c_int,
     uv: NonZero<u16>,
     has_value: bool,
 }
 
 impl<'a, P: Frame> UserFrame<'a, P> {
     /// # Safety
-    /// Top of the stack must be a full userdata.
+    /// `ud` must be valid.
     #[inline(always)]
-    pub(crate) unsafe fn new(parent: &'a mut P, uv: NonZero<u16>) -> Self {
+    pub(crate) unsafe fn new(parent: &'a mut P, ud: c_int, uv: NonZero<u16>) -> Self {
         Self {
             parent,
+            ud,
             uv,
             has_value: false,
         }
@@ -28,7 +30,7 @@ impl<P: Frame> Drop for UserFrame<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.has_value {
-            unsafe { zl_setiuservalue(self.parent.state().get(), -2, self.uv.get()) };
+            unsafe { zl_setiuservalue(self.parent.state().get(), self.ud, self.uv.get()) };
         }
     }
 }
