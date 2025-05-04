@@ -107,7 +107,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
         // Get function name.
         let ident = &f.sig.ident;
         let span = Span::call_site();
-        let name = ident.to_string().replace('_', "");
+        let name = ident.to_string();
 
         match ty {
             FnType::Method => index.extend(quote_spanned! {span=>
