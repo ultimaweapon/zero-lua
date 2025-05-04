@@ -20,14 +20,11 @@ extern "C" {
 
 extern "C" lua_State *zl_newstate()
 {
-    // Create Lua state.
     auto L = luaL_newstate();
 
-    if (!L) {
-        return nullptr;
+    if (L) {
+        memset(lua_getextraspace(L), 0, LUA_EXTRASPACE);
     }
-
-    memset(lua_getextraspace(L), 0, LUA_EXTRASPACE);
 
     return L;
 }

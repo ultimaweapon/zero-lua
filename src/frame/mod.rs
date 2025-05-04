@@ -12,9 +12,9 @@ use crate::ffi::{
 };
 use crate::state::FrameState;
 use crate::{
-    Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, MainState, Nil, NonYieldable,
-    PositiveInt, Str, TYPE_ID, Table, TableFrame, TableGetter, TableSetter, Type, UserData,
-    UserType, Value, Yieldable, is_boxed,
+    Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, Nil, NonYieldable, PositiveInt,
+    Str, TYPE_ID, Table, TableFrame, TableGetter, TableSetter, Type, UserData, UserType, Value,
+    Yieldable, is_boxed,
 };
 use std::any::{TypeId, type_name};
 use std::ffi::CStr;
@@ -36,10 +36,10 @@ mod r#yield;
 pub trait Frame: FrameState {
     /// Returns `true` if `T` was successfully registered or `false` if the other userdata with the
     /// same name already registered.
-    fn register_ud<T: UserType>(&mut self) -> bool
-    where
-        Self: FrameState<State = MainState>,
-    {
+    ///
+    /// # Errors
+    /// This method may raise any error since it can run arbitrary Lua code.
+    fn register_ud<T: UserType>(&mut self) -> bool {
         // Check if exists.
         if unsafe { zl_newmetatable(self.state().get(), T::name().as_ptr()) == 0 } {
             unsafe { zl_pop(self.state().get(), 1) };
@@ -398,8 +398,9 @@ pub trait Frame: FrameState {
         unsafe { Function::new(self) }
     }
 
-    /// # Error
-    /// If the stack cannot grow to the requested size.
+    /// # Errors
+    /// If the stack cannot grow to the requested size (e.g. maximum stack has been reached or out
+    /// of memory).
     #[inline(always)]
     fn ensure_stack(&mut self, n: PositiveInt) {
         unsafe { zl_checkstack(self.state().get(), n.get()) };
