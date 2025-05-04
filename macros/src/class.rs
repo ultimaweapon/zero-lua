@@ -182,8 +182,7 @@ fn parse_const(
     let ty = std::mem::replace(&mut c.ty, parse_quote!(::std::num::NonZero<u16>));
     let uv: u16 = match &c.expr {
         Expr::Infer(_) => {
-            let v = next
-                .clone()
+            let v = (*next)
                 .try_into()
                 .map_err(|_| Error::new_spanned(ident, "the index for property out of range"))?;
 
