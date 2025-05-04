@@ -11,7 +11,7 @@ The main different from [mlua](https://github.com/mlua-rs/mlua) is Zero Lua focu
 
 ## Features
 
-- Safe access to Lua stack with zero cost.
+- Stack based API.
 - Async support with ability to yield values between Rust and Lua.
 - Work with any async executor.
 

@@ -34,14 +34,14 @@ impl<'p, P: Frame, T> OwnedUd<'p, P, T> {
     }
 }
 
-impl<'p, P: Frame, T> Drop for OwnedUd<'p, P, T> {
+impl<P: Frame, T> Drop for OwnedUd<'_, P, T> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.parent.release_values(1) };
     }
 }
 
-impl<'p, P, T> TypedUd for OwnedUd<'p, P, T>
+impl<P, T> TypedUd for OwnedUd<'_, P, T>
 where
     P: Frame,
     T: UserType,
@@ -63,7 +63,7 @@ where
     }
 }
 
-impl<'p, P: Frame, T> FrameState for OwnedUd<'p, P, T> {
+impl<P: Frame, T> FrameState for OwnedUd<'_, P, T> {
     type State = P::State;
 
     #[inline(always)]

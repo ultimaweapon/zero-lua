@@ -30,7 +30,7 @@ where
     }
 }
 
-impl<'a, 'b, P, T> TypedUd for BorrowedUd<'a, 'b, P, T>
+impl<P, T> TypedUd for BorrowedUd<'_, '_, P, T>
 where
     P: Frame,
     T: UserType,
