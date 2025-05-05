@@ -5,16 +5,15 @@ use self::function::invoker;
 use self::userdata::{finalizer, push_metatable};
 use crate::convert::IntoLua;
 use crate::ffi::{
-    ZL_REGISTRYINDEX, zl_checkstack, zl_createtable, zl_getfield, zl_load, zl_newmetatable,
-    zl_newuserdatauv, zl_pop, zl_pushboolean, zl_pushcclosure, zl_pushlstring, zl_pushnil,
-    zl_require_base, zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os,
-    zl_require_string, zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
+    zl_checkstack, zl_createtable, zl_getfield, zl_load, zl_newmetatable, zl_newuserdatauv, zl_pop,
+    zl_pushboolean, zl_pushcclosure, zl_pushlstring, zl_pushnil, zl_require_base,
+    zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os, zl_require_string,
+    zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
 };
 use crate::state::FrameState;
 use crate::{
     Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, Nil, NonYieldable, OwnedUd,
-    PositiveInt, Str, TYPE_ID, Table, TableFrame, TableGetter, TableSetter, Type, UserType, Value,
-    Yieldable, is_boxed,
+    PositiveInt, Str, TYPE_ID, Table, Type, UserType, Yieldable, is_boxed,
 };
 use std::any::{TypeId, type_name};
 use std::ffi::CStr;
@@ -35,11 +34,14 @@ mod r#yield;
 /// Some methods in this trait can raise a Lua error. When calling outside Lua runtime it will
 /// trigger Lua panic, which terminate the process.
 pub trait Frame: FrameState {
+    /// Register a type of full userdata.
+    ///
     /// Returns `true` if `T` was successfully registered or `false` if the other userdata with the
     /// same name already registered.
     ///
     /// # Errors
-    /// This method may raise any error since it can run arbitrary Lua code.
+    /// If memory is not enough plus any error trigger by [`UserType::setup()`] or
+    /// [`UserType::register()`] implemented on `T`.
     fn register_ud<T: UserType>(&mut self) -> bool {
         // Check if exists.
         if unsafe { zl_newmetatable(self.state().get(), T::name().as_ptr()) == 0 } {
@@ -165,14 +167,7 @@ pub trait Frame: FrameState {
         unsafe { Table::new(self) }
     }
 
-    fn set_registry<K: TableSetter>(&mut self, k: K) -> TableFrame<Self, K> {
-        unsafe { TableFrame::new(self, ZL_REGISTRYINDEX, k) }
-    }
-
-    fn get_registry<K: TableGetter>(&mut self, k: K) -> Value<Self> {
-        unsafe { Value::from_table(self, ZL_REGISTRYINDEX, k) }
-    }
-
+    #[inline(always)]
     fn set_global<N: AsRef<CStr>>(&mut self, name: N) -> GlobalSetter<Self, N> {
         GlobalSetter::new(self, name)
     }

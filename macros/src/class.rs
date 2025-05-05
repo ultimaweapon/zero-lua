@@ -206,7 +206,7 @@ fn parse_const(
         v => return Err(Error::new_spanned(v, "unsupported expression")),
     };
 
-    c.expr = parse_quote!(::std::num::NonZero<u16>::new(#uv).unwrap());
+    c.expr = parse_quote!(::std::num::NonZero::<u16>::new(#uv).unwrap());
 
     // Generate Lua accessor.
     let name = ident.to_string().to_ascii_lowercase();
