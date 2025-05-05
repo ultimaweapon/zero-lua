@@ -147,7 +147,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
 
             #[inline(always)]
             fn user_values() -> Option<::std::num::NonZero<u16>> {
-                ::std::num::NonZero<u16>::new(#uv)
+                ::std::num::NonZero::<u16>::new(#uv)
             }
 
             #meta
