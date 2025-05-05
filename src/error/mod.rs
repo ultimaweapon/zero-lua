@@ -115,15 +115,19 @@ impl Error {
     }
 }
 
-impl From<String> for Error {
-    fn from(value: String) -> Self {
-        Self::other(value)
-    }
-}
+impl<T: std::error::Error> From<T> for Error {
+    fn from(value: T) -> Self {
+        let mut msg = value.to_string();
+        let mut src = value.source();
 
-impl<E: std::error::Error> From<(String, E)> for Error {
-    fn from(value: (String, E)) -> Self {
-        Self::with_source(value.0, value.1)
+        while let Some(e) = src {
+            use std::fmt::Write;
+
+            write!(msg, " -> {e}").unwrap();
+            src = e.source();
+        }
+
+        Self::other(msg)
     }
 }
 
