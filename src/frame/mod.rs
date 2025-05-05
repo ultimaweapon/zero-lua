@@ -36,13 +36,29 @@ mod r#yield;
 pub trait Frame: FrameState {
     /// Register a type of full userdata.
     ///
+    /// See [`Frame::try_register_ud()`] for non-panic version.
+    ///
+    /// # Errors
+    /// If memory is not enough plus any error trigger by [`UserType::setup()`] or
+    /// [`UserType::register()`] implemented on `T`.
+    ///
+    /// # Panics
+    /// If the other userdata with the same name as `T` already registered.
+    fn register_ud<T: UserType>(&mut self) {
+        if !self.try_register_ud::<T>() {
+            panic!("{} already registered", T::name().to_string_lossy());
+        }
+    }
+
+    /// Register a type of full userdata.
+    ///
     /// Returns `true` if `T` was successfully registered or `false` if the other userdata with the
     /// same name already registered.
     ///
     /// # Errors
     /// If memory is not enough plus any error trigger by [`UserType::setup()`] or
     /// [`UserType::register()`] implemented on `T`.
-    fn register_ud<T: UserType>(&mut self) -> bool {
+    fn try_register_ud<T: UserType>(&mut self) -> bool {
         // Check if exists.
         if unsafe { zl_newmetatable(self.state().get(), T::name().as_ptr()) == 0 } {
             unsafe { zl_pop(self.state().get(), 1) };

@@ -147,7 +147,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
 
             #[inline(always)]
             fn user_values() -> Option<::std::num::NonZero<u16>> {
-                ::std::num::NonZero::<u16>::new(#uv)
+                ::std::num::NonZero::new(#uv)
             }
 
             #meta
@@ -206,14 +206,14 @@ fn parse_const(
         v => return Err(Error::new_spanned(v, "unsupported expression")),
     };
 
-    c.expr = parse_quote!(::std::num::NonZero::<u16>::new(#uv).unwrap());
+    c.expr = parse_quote!(::std::num::NonZero::new(#uv).unwrap());
 
     // Generate Lua accessor.
     let name = ident.to_string().to_ascii_lowercase();
     let span = Span::call_site();
 
     index.extend(quote_spanned! {span=>
-        #name => cx.push_uv::<Self>(::zl::PositiveInt::ONE, #uv.try_into().unwrap()),
+        #name => cx.push_uv::<Self>(::zl::PositiveInt::ONE, Self::#ident),
     });
 
     // Generate Rust setter.
@@ -222,7 +222,7 @@ fn parse_const(
 
     setters.extend(quote_spanned! {span=>
         #vis fn #setter<T: ::zl::TypedUd<Type = Self>>(ud: &mut T, v: #ty) {
-            ::zl::IntoLua::into_lua(v, &mut ud.set_uv(#uv.try_into().unwrap()).unwrap());
+            ::zl::IntoLua::into_lua(v, &mut ud.set_uv(Self::#ident).unwrap());
         }
     });
 
