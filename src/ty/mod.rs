@@ -28,6 +28,7 @@ impl Type {
 }
 
 impl Display for Type {
+    #[inline(always)]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str((*self).into())
     }
@@ -36,7 +37,7 @@ impl Display for Type {
 impl From<Type> for &'static str {
     #[inline(always)]
     fn from(value: Type) -> Self {
-        // SAFETY: All type name returned from lua54_typename are UTF-8 and has static storage.
+        // SAFETY: All type name returned from zl_typename are UTF-8 and has static storage.
         unsafe { std::str::from_utf8_unchecked(value.name().to_bytes()) }
     }
 }

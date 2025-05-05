@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 pub use self::boolean::*;
 pub use self::context::*;
 pub use self::convert::*;

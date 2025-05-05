@@ -99,12 +99,30 @@ pub trait Frame: FrameState {
         true
     }
 
+    /// Load [basic library](https://www.lua.org/manual/5.4/manual.html#6.1).
+    ///
+    /// If this library already loaded this simply return it.
+    ///
+    /// This use `luaL_requiref` + `luaopen_base` under the hood.
+    ///
+    /// # Errors
+    /// If memory is not enough.
     #[inline(always)]
-    fn require_base(&mut self, global: bool) -> Table<Self> {
-        unsafe { zl_require_base(self.state().get(), global) };
+    fn require_base(&mut self) -> Table<Self> {
+        unsafe { zl_require_base(self.state().get()) };
         unsafe { Table::new(self) }
     }
 
+    /// Load [coroutine library](https://www.lua.org/manual/5.4/manual.html#6.2).
+    ///
+    /// If this library already loaded this simply return it. Specify `true` for `global` if you
+    /// want to put the library itself to global environment otherwise `coroutine` table will not
+    /// available to Lua.
+    ///
+    /// This use `luaL_requiref` + `luaopen_coroutine` under the hood.
+    ///
+    /// # Errors
+    /// If memory is not enough.
     #[inline(always)]
     fn require_coroutine(&mut self, global: bool) -> Table<Self> {
         unsafe { zl_require_coroutine(self.state().get(), global) };
