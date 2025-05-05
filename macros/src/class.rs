@@ -84,19 +84,15 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
         0 => TokenStream::new(),
         n => {
             let n = u16::try_from(n).unwrap();
-            let mut t = quote! {
+
+            quote! {
                 fn register<P: ::zl::Frame>(mut g: ::zl::GlobalSetter<P, &::core::ffi::CStr>) {
                     use ::zl::Frame;
 
                     let mut t = g.push_table(0, #n);
+                    #(#globs)*
                 }
-            };
-
-            for g in globs {
-                t.extend(g);
             }
-
-            t
         }
     };
 
@@ -151,7 +147,7 @@ pub fn transform(mut item: ItemImpl, opts: Options) -> syn::Result<TokenStream> 
 
             #[inline(always)]
             fn user_values() -> Option<::std::num::NonZero<u16>> {
-                :std::num::NonZero<u16>::new(#uv)
+                ::std::num::NonZero<u16>::new(#uv)
             }
 
             #meta

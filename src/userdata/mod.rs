@@ -25,9 +25,17 @@ pub(crate) const fn is_boxed<T: UserType>() -> bool {
 /// [`Frame::register_ud()`] before its value can be pushed into Lua.
 ///
 /// This trait has a derive macro to generate a simple implementation for types that need to be
-/// passed between Rust and Lua but can't construct or interact with it on Lua side. Zero Lua also
-/// provides [class](zl_macros::class()) attribute to generate this implementation that can be
-/// constructed or interact with in on Lua side.
+/// passed between Rust and Lua but can't construct or interact with it on Lua side:
+///
+/// ```
+/// use zl::UserType;
+///
+/// #[derive(UserType)]
+/// struct MyType;
+/// ```
+///
+/// Zero Lua also provides [class](zl_macros::class()) attribute to generate this implementation
+/// that can be constructed or interact with in on Lua side.
 pub trait UserType: RefUnwindSafe + 'static {
     fn name() -> &'static CStr;
 
