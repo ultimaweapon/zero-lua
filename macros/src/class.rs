@@ -287,8 +287,15 @@ fn parse_fn(
         break;
     }
 
-    // Get function name.
+    // Check if new method.
     let ident = &f.sig.ident;
+
+    if ty == FnType::ClassMethod && ident == "new" {
+        f.attrs
+            .push(parse_quote!(#[allow(clippy::new_ret_no_self)]));
+    }
+
+    // Get function name.
     let span = Span::call_site();
     let name = ident.to_string();
 
@@ -337,6 +344,7 @@ impl Options {
     }
 }
 
+#[derive(PartialEq, Eq)]
 enum FnType {
     Method,
     AsyncMethod,
