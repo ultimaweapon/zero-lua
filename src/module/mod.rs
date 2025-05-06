@@ -31,7 +31,7 @@ where
     }
 }
 
-impl<'p, P, N> Drop for ModuleBuilder<'p, P, N>
+impl<P, N> Drop for ModuleBuilder<'_, P, N>
 where
     P: Frame,
     N: AsRef<CStr>,
@@ -50,7 +50,7 @@ where
     }
 }
 
-impl<'p, P, N> FrameState for ModuleBuilder<'p, P, N>
+impl<P, N> FrameState for ModuleBuilder<'_, P, N>
 where
     P: Frame,
     N: AsRef<CStr>,
