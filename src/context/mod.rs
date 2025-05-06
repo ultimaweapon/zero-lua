@@ -49,11 +49,10 @@ impl<'a, S: LocalState> Context<'a, S> {
     ///
     /// # Panics
     /// If `n` is zero or negative.
-    pub fn is_nil(&self, n: c_int) -> bool {
-        assert!(n > 0);
-
+    #[inline(always)]
+    pub fn is_nil(&self, n: PositiveInt) -> bool {
         if n <= self.args {
-            unsafe { zl_isnil(self.state.get(), n) }
+            unsafe { zl_isnil(self.state.get(), n.get()) }
         } else {
             true
         }
@@ -64,18 +63,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     ///
     /// This method always raise a Lua error if `n` is not a function argument.
     pub fn to_str(&self, n: PositiveInt) -> &'a str {
-        if n > self.args {
-            // engine_checkstring require a valid index so we need to emulate its behavior in this
-            // case.
-            self.arg_out_of_bound(n, b"string");
-        }
-
-        // SAFETY: luaL_checklstring never return null.
-        let mut l = 0;
-        let v = unsafe { zl_checklstring(self.state.get(), n.get(), &mut l) };
-        let v = unsafe { std::slice::from_raw_parts(v.cast(), l) };
-
-        match std::str::from_utf8(v) {
+        match std::str::from_utf8(self.to_bytes(n)) {
             Ok(v) => v,
             Err(e) => self.raise(Error::arg_from_std(n, e)),
         }
@@ -106,6 +94,21 @@ impl<'a, S: LocalState> Context<'a, S> {
             Ok(v) => Some(v),
             Err(e) => self.raise(Error::arg_from_std(n, e)),
         }
+    }
+
+    #[inline(always)]
+    pub fn to_bytes(&self, n: PositiveInt) -> &'a [u8] {
+        if n > self.args {
+            // luaL_checklstring require a valid index so we need to emulate its behavior in this
+            // case.
+            self.arg_out_of_bound(n, b"string");
+        }
+
+        // SAFETY: luaL_checklstring never return null.
+        let mut l = 0;
+        let v = unsafe { zl_checklstring(self.state.get(), n.get(), &mut l) };
+
+        unsafe { std::slice::from_raw_parts(v.cast(), l) }
     }
 
     /// Get table argument or raise a Lua error if the argument is not a table.
