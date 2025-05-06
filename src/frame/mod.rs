@@ -19,7 +19,6 @@ use std::any::{TypeId, type_name};
 use std::ffi::CStr;
 use std::iter::Fuse;
 use std::mem::ManuallyDrop;
-use std::panic::RefUnwindSafe;
 use std::path::Path;
 use std::ptr::null;
 
@@ -347,7 +346,7 @@ pub trait Frame: FrameState {
     /// See [`Context`] for how to return some values to Lua.
     fn push_fn<F>(&mut self, f: F) -> Function<Self>
     where
-        F: Fn(&mut Context<NonYieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
+        F: Fn(&mut Context<NonYieldable>) -> Result<(), Error> + 'static,
     {
         if size_of::<F>() == 0 {
             unsafe { zl_pushcclosure(self.state().get(), invoker::<F>, 0) };
@@ -389,7 +388,7 @@ pub trait Frame: FrameState {
     /// See [`Context`] for how to return some values to Lua.
     fn push_async<F>(&mut self, f: F) -> Function<Self>
     where
-        F: AsyncFn(&mut Context<Yieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
+        F: AsyncFn(&mut Context<Yieldable>) -> Result<(), Error> + 'static,
     {
         if size_of::<F>() == 0 {
             unsafe { zl_pushcclosure(self.state().get(), async_invoker::<F>, 0) };

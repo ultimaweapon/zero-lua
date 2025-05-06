@@ -6,7 +6,6 @@ pub use self::value::*;
 use crate::{Frame, GlobalSetter, Table, Value};
 use std::ffi::CStr;
 use std::num::NonZero;
-use std::panic::RefUnwindSafe;
 
 mod borrowed;
 mod frame;
@@ -36,7 +35,7 @@ pub(crate) const fn is_boxed<T: UserType>() -> bool {
 ///
 /// Zero Lua also provides [class](zl_macros::class()) attribute to generate this implementation
 /// that can be constructed or interact with in on Lua side.
-pub trait UserType: RefUnwindSafe + 'static {
+pub trait UserType: 'static {
     fn name() -> &'static CStr;
 
     /// Returns the number of user values for this type.

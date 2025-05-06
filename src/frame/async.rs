@@ -4,7 +4,6 @@ use crate::ffi::{
 };
 use crate::{AsyncContext, Context, Error, Yieldable};
 use std::ffi::c_int;
-use std::panic::RefUnwindSafe;
 use std::pin::Pin;
 use std::ptr::null_mut;
 use std::task::Poll;
@@ -13,7 +12,7 @@ pub unsafe extern "C-unwind" fn async_invoker<F>(
     #[allow(non_snake_case)] L: *mut lua_State,
 ) -> c_int
 where
-    F: AsyncFn(&mut Context<Yieldable>) -> Result<(), Error> + RefUnwindSafe + 'static,
+    F: AsyncFn(&mut Context<Yieldable>) -> Result<(), Error> + 'static,
 {
     let args = unsafe { zl_gettop(L) };
 
