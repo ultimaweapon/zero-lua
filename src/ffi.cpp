@@ -16,6 +16,7 @@ static_assert(LUA_MULTRET == -1);
 
 extern "C" {
     int ZL_REGISTRYINDEX = LUA_REGISTRYINDEX;
+    const char *ZL_LOADED_TABLE = LUA_LOADED_TABLE;
 }
 
 extern "C" lua_State *zl_newstate()
@@ -119,6 +120,11 @@ extern "C" void zl_pushcclosure(lua_State *L, int (*fn) (lua_State *L), int n)
     lua_pushcclosure(L, fn, n);
 }
 
+extern "C" void zl_pushvalue(lua_State *L, int index)
+{
+    return lua_pushvalue(L, index);
+}
+
 extern "C" int zl_gettop(lua_State *L)
 {
     return lua_gettop(L);
@@ -207,6 +213,11 @@ extern "C" int zl_getfield(lua_State *L, int index, const char *k)
 extern "C" void zl_setfield(lua_State *L, int index, const char *k)
 {
     lua_setfield(L, index, k);
+}
+
+extern "C" int zl_getsubtable(lua_State *L, int idx, const char *fname)
+{
+    return luaL_getsubtable(L, idx, fname);
 }
 
 extern "C" void *zl_newuserdatauv(lua_State *L, size_t size, int nuvalue)

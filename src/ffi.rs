@@ -12,6 +12,7 @@ pub struct lua_State([u8; 0]);
 
 unsafe extern "C-unwind" {
     pub static ZL_REGISTRYINDEX: c_int;
+    pub static ZL_LOADED_TABLE: *const c_char;
 
     pub safe fn zl_newstate() -> *mut lua_State;
     pub fn zl_close(L: *mut lua_State);
@@ -42,6 +43,7 @@ unsafe extern "C-unwind" {
         fp: unsafe extern "C-unwind" fn(*mut lua_State) -> c_int,
         n: c_int,
     );
+    pub fn zl_pushvalue(L: *mut lua_State, index: c_int);
     pub fn zl_gettop(L: *mut lua_State) -> c_int;
     pub fn zl_checklstring(L: *mut lua_State, arg: c_int, l: *mut usize) -> *const c_char;
     pub fn zl_typeerror(L: *mut lua_State, arg: c_int, tname: *const c_char) -> !;
@@ -60,6 +62,7 @@ unsafe extern "C-unwind" {
     pub fn zl_seti(L: *mut lua_State, index: c_int, n: i64);
     pub fn zl_getfield(L: *mut lua_State, index: c_int, k: *const c_char) -> Type;
     pub fn zl_setfield(L: *mut lua_State, index: c_int, k: *const c_char);
+    pub fn zl_getsubtable(L: *mut lua_State, idx: c_int, fname: *const c_char) -> c_int;
     pub fn zl_newuserdatauv(L: *mut lua_State, size: usize, nuvalue: c_int) -> *mut u8;
     pub fn zl_setiuservalue(L: *mut lua_State, index: c_int, n: u16) -> c_int;
     pub fn zl_getiuservalue(L: *mut lua_State, index: c_int, n: u16) -> Type;

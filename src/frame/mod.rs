@@ -5,15 +5,16 @@ use self::function::invoker;
 use self::userdata::{finalizer, push_metatable};
 use crate::convert::IntoLua;
 use crate::ffi::{
-    zl_checkstack, zl_createtable, zl_getfield, zl_load, zl_newmetatable, zl_newuserdatauv, zl_pop,
-    zl_pushboolean, zl_pushcclosure, zl_pushlstring, zl_pushnil, zl_require_base,
-    zl_require_coroutine, zl_require_io, zl_require_math, zl_require_os, zl_require_string,
-    zl_require_table, zl_require_utf8, zl_setfield, zl_setmetatable,
+    ZL_LOADED_TABLE, ZL_REGISTRYINDEX, zl_checkstack, zl_createtable, zl_getfield, zl_getsubtable,
+    zl_load, zl_newmetatable, zl_newuserdatauv, zl_pop, zl_pushboolean, zl_pushcclosure,
+    zl_pushlstring, zl_pushnil, zl_require_base, zl_require_coroutine, zl_require_io,
+    zl_require_math, zl_require_os, zl_require_string, zl_require_table, zl_require_utf8,
+    zl_setfield, zl_setmetatable,
 };
 use crate::state::FrameState;
 use crate::{
-    Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, Nil, NonYieldable, OwnedUd,
-    PositiveInt, Str, TYPE_ID, Table, Type, UserType, Yieldable, is_boxed,
+    Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, ModuleBuilder, Nil,
+    NonYieldable, OwnedUd, PositiveInt, Str, TYPE_ID, Table, Type, UserType, Yieldable, is_boxed,
 };
 use std::any::{TypeId, type_name};
 use std::ffi::CStr;
@@ -180,6 +181,20 @@ pub trait Frame: FrameState {
     fn require_utf8(&mut self, global: bool) -> Table<Self> {
         unsafe { zl_require_utf8(self.state().get(), global) };
         unsafe { Table::new(self) }
+    }
+
+    #[inline(always)]
+    fn register_module<N: AsRef<CStr>>(&mut self, name: N) -> Option<ModuleBuilder<Self, N>> {
+        unsafe { zl_getsubtable(self.state().get(), ZL_REGISTRYINDEX, ZL_LOADED_TABLE) };
+
+        match unsafe { zl_getfield(self.state().get(), -1, name.as_ref().as_ptr()) } {
+            Type::None => unreachable!(),
+            Type::Nil => {
+                unsafe { zl_pop(self.state().get(), 1) };
+                Some(unsafe { ModuleBuilder::new(self, name) })
+            }
+            _ => None,
+        }
     }
 
     #[inline(always)]
