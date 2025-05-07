@@ -1,6 +1,6 @@
 use crate::Frame;
 use crate::ffi::{zl_pop, zl_replace, zl_setiuservalue};
-use crate::state::FrameState;
+use crate::state::RawState;
 use std::ffi::c_int;
 use std::num::NonZero;
 
@@ -35,7 +35,7 @@ impl<P: Frame> Drop for UserFrame<'_, P> {
     }
 }
 
-impl<P: Frame> FrameState for UserFrame<'_, P> {
+impl<P: Frame> RawState for UserFrame<'_, P> {
     type State = P::State;
 
     #[inline(always)]

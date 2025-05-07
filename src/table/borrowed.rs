@@ -1,6 +1,6 @@
 use super::TableGetter;
 use crate::ffi::zl_pop;
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{Frame, PositiveInt, Value};
 use std::ffi::c_int;
 
@@ -26,7 +26,7 @@ impl<'a, P: Frame> BorrowedTable<'a, P> {
     }
 }
 
-impl<P: Frame> FrameState for BorrowedTable<'_, P> {
+impl<P: Frame> RawState for BorrowedTable<'_, P> {
     type State = P::State;
 
     #[inline(always)]

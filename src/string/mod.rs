@@ -1,5 +1,5 @@
 use crate::ffi::{zl_pop, zl_tolstring};
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{Frame, FromOption, OptionError, Unknown};
 use std::ffi::{CStr, c_int};
 use std::fmt::{Debug, Formatter};
@@ -61,7 +61,7 @@ impl<P: Frame> Drop for Str<'_, P> {
     }
 }
 
-impl<P: Frame> FrameState for Str<'_, P> {
+impl<P: Frame> RawState for Str<'_, P> {
     type State = P::State;
 
     #[inline(always)]

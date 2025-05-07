@@ -1,6 +1,6 @@
 use super::{TypedUd, UserData, UserFrame, UserType};
 use crate::ffi::zl_pop;
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{Frame, Unknown, Value};
 use std::ffi::c_int;
 use std::marker::PhantomData;
@@ -63,7 +63,7 @@ where
     }
 }
 
-impl<P: Frame, T> FrameState for OwnedUd<'_, P, T> {
+impl<P: Frame, T> RawState for OwnedUd<'_, P, T> {
     type State = P::State;
 
     #[inline(always)]

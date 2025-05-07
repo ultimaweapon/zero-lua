@@ -1,6 +1,6 @@
 use super::Unknown;
 use crate::ffi::{lua_State, zl_replace};
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{Frame, PositiveInt};
 use std::marker::PhantomData;
 

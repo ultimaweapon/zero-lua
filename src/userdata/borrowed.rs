@@ -1,6 +1,6 @@
 use super::{TypedUd, UserFrame, UserType};
 use crate::ffi::zl_pop;
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{Frame, PositiveInt, Value};
 use std::ffi::c_int;
 use std::num::NonZero;
@@ -52,7 +52,7 @@ where
     }
 }
 
-impl<P: Frame, T> FrameState for BorrowedUd<'_, '_, P, T> {
+impl<P: Frame, T> RawState for BorrowedUd<'_, '_, P, T> {
     type State = P::State;
 
     #[inline(always)]

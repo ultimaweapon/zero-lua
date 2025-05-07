@@ -1,5 +1,6 @@
-use super::{Frame, FrameState};
+use super::Frame;
 use crate::ffi::zl_pop;
+use crate::state::RawState;
 use crate::{Ret, YieldValues, Yieldable};
 use std::cell::Cell;
 use std::ffi::c_int;
@@ -58,7 +59,7 @@ impl<P: Frame> Drop for Yield<'_, P> {
     }
 }
 
-impl<P: Frame> FrameState for Yield<'_, P> {
+impl<P: Frame> RawState for Yield<'_, P> {
     type State = P::State;
 
     #[inline(always)]

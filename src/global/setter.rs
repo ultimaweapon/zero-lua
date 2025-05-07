@@ -1,6 +1,6 @@
 use crate::Frame;
 use crate::ffi::{zl_pop, zl_replace, zl_setglobal};
-use crate::state::FrameState;
+use crate::state::RawState;
 use std::ffi::{CStr, c_int};
 
 /// Provides [`Frame`] implementation to set a global value.
@@ -45,7 +45,7 @@ where
     }
 }
 
-impl<P, N> FrameState for GlobalSetter<'_, P, N>
+impl<P, N> RawState for GlobalSetter<'_, P, N>
 where
     P: Frame,
     N: AsRef<CStr>,

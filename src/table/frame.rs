@@ -1,7 +1,7 @@
 use super::TableSetter;
 use crate::Frame;
 use crate::ffi::{zl_pop, zl_replace};
-use crate::state::FrameState;
+use crate::state::RawState;
 use std::ffi::c_int;
 
 /// Provides [`Frame`] implementation to set a table value.
@@ -50,7 +50,7 @@ where
     }
 }
 
-impl<P, K> FrameState for TableFrame<'_, P, K>
+impl<P, K> RawState for TableFrame<'_, P, K>
 where
     P: Frame,
     K: TableSetter,

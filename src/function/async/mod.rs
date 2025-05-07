@@ -3,7 +3,7 @@ pub use self::result::*;
 use self::resume::Resume;
 use super::Ret;
 use crate::ffi::{LUA_OK, LUA_YIELD, zl_pop};
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{Frame, Str};
 use std::cell::Cell;
 use std::ffi::c_int;
@@ -79,7 +79,7 @@ impl<P: Frame> Drop for AsyncCall<'_, P> {
     }
 }
 
-impl<P: Frame> FrameState for AsyncCall<'_, P> {
+impl<P: Frame> RawState for AsyncCall<'_, P> {
     type State = P::State;
 
     #[inline(always)]

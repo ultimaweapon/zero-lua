@@ -2,7 +2,7 @@ pub(crate) use self::state::*;
 
 use super::MainState;
 use crate::ffi::{ZL_REGISTRYINDEX, zl_newthread, zl_pop, zl_ref, zl_unref};
-use crate::state::FrameState;
+use crate::state::RawState;
 use std::ffi::c_int;
 use std::marker::PhantomPinned;
 use std::pin::Pin;
@@ -49,7 +49,7 @@ impl Drop for AsyncThread {
     }
 }
 
-impl FrameState for AsyncThread {
+impl RawState for AsyncThread {
     type State = AsyncState;
 
     #[inline(always)]

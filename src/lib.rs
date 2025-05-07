@@ -21,7 +21,7 @@ pub use self::util::*;
 pub use zl_macros::*;
 
 use self::ffi::{zl_getiuservalue, zl_getmetafield, zl_pop, zl_tolstring};
-use self::state::FrameState;
+use self::state::RawState;
 use std::borrow::Cow;
 use std::ffi::{CStr, c_int};
 use std::mem::transmute;

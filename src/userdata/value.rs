@@ -1,6 +1,6 @@
 use super::{OwnedUd, UserType, is_boxed};
 use crate::ffi::{zl_getfield, zl_getmetatable, zl_pop, zl_touserdata};
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{Frame, TYPE_ID, Unknown};
 use std::any::TypeId;
 use std::ffi::c_int;
@@ -68,7 +68,7 @@ impl<'p, P: Frame, T> From<OwnedUd<'p, P, T>> for UserData<'p, P> {
     }
 }
 
-impl<P: Frame> FrameState for UserData<'_, P> {
+impl<P: Frame> RawState for UserData<'_, P> {
     type State = P::State;
 
     #[inline(always)]

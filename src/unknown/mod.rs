@@ -2,7 +2,7 @@ pub use self::frame::*;
 pub use self::setter::*;
 
 use crate::ffi::{zl_gettop, zl_pop};
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{Frame, PositiveInt};
 use std::ffi::c_int;
 
@@ -37,7 +37,7 @@ impl<P: Frame> Drop for Unknown<'_, P> {
     }
 }
 
-impl<P: Frame> FrameState for Unknown<'_, P> {
+impl<P: Frame> RawState for Unknown<'_, P> {
     type State = P::State;
 
     #[inline(always)]

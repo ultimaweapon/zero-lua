@@ -11,7 +11,7 @@ use crate::ffi::{
     zl_require_math, zl_require_os, zl_require_string, zl_require_table, zl_require_utf8,
     zl_setfield, zl_setmetatable,
 };
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{
     Bool, ChunkType, Context, Error, Function, GlobalSetter, Iter, ModuleBuilder, Nil,
     NonYieldable, OwnedUd, PositiveInt, Str, TYPE_ID, Table, Type, UserType, Yieldable, is_boxed,
@@ -33,7 +33,7 @@ mod r#yield;
 ///
 /// Some methods in this trait can raise a Lua error. When calling outside Lua runtime it will
 /// trigger Lua panic, which terminate the process.
-pub trait Frame: FrameState {
+pub trait Frame: RawState {
     /// Register a type of full userdata.
     ///
     /// See [`Frame::try_register_ud()`] for non-panic version.
@@ -453,13 +453,13 @@ pub trait Frame: FrameState {
     #[inline(always)]
     fn as_yield(&mut self) -> Yield<Self>
     where
-        Self: FrameState<State = Yieldable>,
+        Self: RawState<State = Yieldable>,
     {
         Yield::new(self)
     }
 }
 
-impl<T: FrameState> Frame for T {}
+impl<T: RawState> Frame for T {}
 
 #[cfg(test)]
 mod tests {

@@ -1,6 +1,6 @@
 use crate::Frame;
 use crate::ffi::zl_pop;
-use crate::state::FrameState;
+use crate::state::RawState;
 use std::ffi::c_int;
 
 /// Provides [`Frame`] implementation on [Unknown](super::Unknown) value as a workspace.
@@ -13,7 +13,7 @@ impl<'a, P: Frame> UnknownFrame<'a, P> {
     }
 }
 
-impl<P: Frame> FrameState for UnknownFrame<'_, P> {
+impl<P: Frame> RawState for UnknownFrame<'_, P> {
     type State = P::State;
 
     #[inline(always)]

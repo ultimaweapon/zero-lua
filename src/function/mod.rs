@@ -2,7 +2,7 @@ pub use self::r#async::*;
 pub use self::result::*;
 
 use crate::ffi::{LUA_MULTRET, zl_gettop, zl_pcall, zl_pop};
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{AsyncState, Frame, MainState, Str, Unknown};
 use std::ffi::c_int;
 
@@ -93,7 +93,7 @@ impl<P: Frame> Drop for Function<'_, P> {
     }
 }
 
-impl<P: Frame> FrameState for Function<'_, P> {
+impl<P: Frame> RawState for Function<'_, P> {
     type State = P::State;
 
     #[inline(always)]

@@ -1,6 +1,6 @@
 use crate::Frame;
 use crate::ffi::{zl_pop, zl_pushvalue, zl_replace, zl_setfield, zl_setglobal};
-use crate::state::FrameState;
+use crate::state::RawState;
 use std::ffi::{CStr, c_int};
 
 /// Struct to build Lua module.
@@ -50,7 +50,7 @@ where
     }
 }
 
-impl<P, N> FrameState for ModuleBuilder<'_, P, N>
+impl<P, N> RawState for ModuleBuilder<'_, P, N>
 where
     P: Frame,
     N: AsRef<CStr>,

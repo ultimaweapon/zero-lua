@@ -4,7 +4,7 @@ use crate::ffi::{
     zl_argerror, zl_checklstring, zl_error, zl_getfield, zl_getiuservalue, zl_getmetatable,
     zl_isnil, zl_istable, zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
 };
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{
     BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, TYPE_ID, UserType, is_boxed,
 };
@@ -220,7 +220,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     }
 }
 
-impl<S: LocalState> FrameState for Context<'_, S> {
+impl<S: LocalState> RawState for Context<'_, S> {
     type State = S;
 
     #[inline(always)]

@@ -33,8 +33,8 @@ impl State {
     }
 }
 
-/// Provides method to get `lua_State` for a frame.
-pub trait FrameState: Sized {
+/// Provides method to get `lua_State`.
+pub trait RawState: Sized {
     type State: DerefMut<Target = State>;
 
     fn state(&mut self) -> &mut Self::State;

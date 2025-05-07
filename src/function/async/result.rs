@@ -1,6 +1,6 @@
 use crate::Frame;
 use crate::ffi::zl_pop;
-use crate::state::FrameState;
+use crate::state::RawState;
 use std::ffi::c_int;
 
 /// Result frame of async call.
@@ -13,7 +13,7 @@ impl<'a, P: Frame> AsyncFrame<'a, P> {
     }
 }
 
-impl<P: Frame> FrameState for AsyncFrame<'_, P> {
+impl<P: Frame> RawState for AsyncFrame<'_, P> {
     type State = P::State;
 
     #[inline(always)]

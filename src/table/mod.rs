@@ -3,7 +3,7 @@ pub use self::frame::*;
 pub use self::key::*;
 
 use crate::ffi::zl_pop;
-use crate::state::FrameState;
+use crate::state::RawState;
 use crate::{Frame, Unknown};
 use std::ffi::c_int;
 use std::mem::ManuallyDrop;
@@ -46,7 +46,7 @@ impl<P: Frame> Drop for Table<'_, P> {
     }
 }
 
-impl<P: Frame> FrameState for Table<'_, P> {
+impl<P: Frame> RawState for Table<'_, P> {
     type State = P::State;
 
     #[inline(always)]
