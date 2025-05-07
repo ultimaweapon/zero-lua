@@ -1,14 +1,10 @@
-pub(crate) use self::state::*;
-
 use super::MainState;
-use crate::ffi::{ZL_REGISTRYINDEX, zl_newthread, zl_pop, zl_ref, zl_unref};
+use crate::ffi::{ZL_REGISTRYINDEX, lua_State, zl_newthread, zl_pop, zl_ref, zl_unref};
 use crate::state::RawState;
 use std::ffi::c_int;
 use std::marker::PhantomPinned;
 use std::pin::Pin;
 use std::rc::Rc;
-
-mod state;
 
 /// Provides method to create a Lua thread with ability to call into async function.
 pub struct AsyncLua {
@@ -30,7 +26,7 @@ impl AsyncLua {
 
         AsyncThread {
             main: self.clone(),
-            state: unsafe { AsyncState::new(state) },
+            state,
             index,
         }
     }
@@ -39,7 +35,7 @@ impl AsyncLua {
 /// Encapsulates a Lua thread that can call into async function.
 pub struct AsyncThread {
     main: Pin<Rc<AsyncLua>>,
-    state: AsyncState,
+    state: *mut lua_State,
     index: c_int,
 }
 
@@ -50,15 +46,13 @@ impl Drop for AsyncThread {
 }
 
 impl RawState for AsyncThread {
-    type State = AsyncState;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
-        &mut self.state
+    fn state(&mut self) -> *mut lua_State {
+        self.state
     }
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { zl_pop(self.state.get(), n) };
+        unsafe { zl_pop(self.state, n) };
     }
 }

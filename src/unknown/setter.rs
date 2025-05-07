@@ -32,7 +32,7 @@ impl UnknownSetter<'_> {
     {
         let mut v = v.into();
 
-        assert_eq!(v.state().get(), self.state);
+        assert_eq!(v.state(), self.state);
         unsafe { zl_replace(self.state, self.index.get()) };
         std::mem::forget(v);
     }

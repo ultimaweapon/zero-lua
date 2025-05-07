@@ -1,6 +1,6 @@
 use super::{AsyncContext, PendingFuture, YieldValues};
 use crate::ffi::{LUA_YIELD, zl_pop, zl_resume, zl_touserdata};
-use crate::state::State;
+use crate::state::RawState;
 use std::cell::Cell;
 use std::ffi::c_int;
 use std::mem::transmute;
@@ -11,18 +11,18 @@ use std::rc::Rc;
 use std::task::{Context, Poll};
 
 /// Implementation of [`Future`] to poll yieldable function.
-pub struct Resume<'a> {
-    state: &'a mut State,
+pub struct Resume<'a, S: RawState> {
+    state: &'a mut S,
     args: &'a mut c_int,
     values: &'a Rc<Cell<YieldValues>>,
     results: &'a mut c_int,
     pending: &'a mut Option<PendingFuture>,
 }
 
-impl<'a> Resume<'a> {
+impl<'a, S: RawState> Resume<'a, S> {
     #[inline(always)]
     pub(super) fn new(
-        state: &'a mut State,
+        state: &'a mut S,
         args: &'a mut c_int,
         values: &'a Rc<Cell<YieldValues>>,
         results: &'a mut c_int,
@@ -38,7 +38,7 @@ impl<'a> Resume<'a> {
     }
 }
 
-impl Future for Resume<'_> {
+impl<S: RawState> Future for Resume<'_, S> {
     type Output = c_int;
 
     #[inline(never)]
@@ -59,7 +59,7 @@ impl Future for Resume<'_> {
                     if args > 0 {
                         // The pending future does not prepare for this so we need to remove it
                         // here.
-                        unsafe { zl_pop(this.state.get(), args) };
+                        unsafe { zl_pop(this.state.state(), args) };
                         args = 0;
                     }
                 }
@@ -69,8 +69,8 @@ impl Future for Resume<'_> {
         }
 
         // We forbid async call within LocalState so "from" always null here.
-        let l = unsafe { ContextLock::new(this.state, &mut cx) };
-        let r = unsafe { zl_resume(l.get(), null_mut(), args, this.results) };
+        let mut l = unsafe { ContextLock::new(this.state, &mut cx) };
+        let r = unsafe { zl_resume(l.state(), null_mut(), args, this.results) };
 
         drop(l);
 
@@ -81,20 +81,20 @@ impl Future for Resume<'_> {
         // Check if yield from our invokder.
         let cx = &mut cx as *mut AsyncContext as *mut u8;
 
-        if *this.results != 3 || unsafe { zl_touserdata(this.state.get(), -1) != cx } {
+        if *this.results != 3 || unsafe { zl_touserdata(this.state.state(), -1) != cx } {
             return Poll::Ready(LUA_YIELD);
         }
 
         // Keep pending future.
-        let future = unsafe { zl_touserdata(this.state.get(), -2).cast() };
-        let drop = unsafe { zl_touserdata(this.state.get(), -3) };
+        let future = unsafe { zl_touserdata(this.state.state(), -2).cast() };
+        let drop = unsafe { zl_touserdata(this.state.state(), -3) };
 
         *this.pending = Some(PendingFuture {
             future,
             drop: unsafe { transmute::<*mut u8, unsafe fn(*mut ())>(drop) },
         });
 
-        unsafe { zl_pop(this.state.get(), 3) };
+        unsafe { zl_pop(this.state.state(), 3) };
 
         // Check how we yield.
         match this.values.get() {
@@ -110,16 +110,16 @@ impl Future for Resume<'_> {
 }
 
 /// RAII struct to clear extra space from `lua_State`.
-struct ContextLock<'a, 'b, 'c> {
-    st: &'a mut State,
+struct ContextLock<'a, 'b, 'c, S: RawState> {
+    st: &'a mut S,
     cx: *mut *mut AsyncContext<'b, 'c>,
 }
 
-impl<'a, 'b, 'c> ContextLock<'a, 'b, 'c> {
+impl<'a, 'b, 'c, S: RawState> ContextLock<'a, 'b, 'c, S> {
     /// # Safety
     /// Extra space must be a pointer size and it must not contains any data.
     #[inline(always)]
-    unsafe fn new(st: &'a mut State, cx: &'a mut AsyncContext<'b, 'c>) -> Self {
+    unsafe fn new(st: &'a mut S, cx: &'a mut AsyncContext<'b, 'c>) -> Self {
         let ptr = st.extra2::<AsyncContext>();
 
         unsafe { ptr.write(cx) };
@@ -128,22 +128,22 @@ impl<'a, 'b, 'c> ContextLock<'a, 'b, 'c> {
     }
 }
 
-impl Drop for ContextLock<'_, '_, '_> {
+impl<S: RawState> Drop for ContextLock<'_, '_, '_, S> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe { self.cx.write(null_mut()) };
     }
 }
 
-impl Deref for ContextLock<'_, '_, '_> {
-    type Target = State;
+impl<S: RawState> Deref for ContextLock<'_, '_, '_, S> {
+    type Target = S;
 
     fn deref(&self) -> &Self::Target {
         self.st
     }
 }
 
-impl DerefMut for ContextLock<'_, '_, '_> {
+impl<S: RawState> DerefMut for ContextLock<'_, '_, '_, S> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.st
     }

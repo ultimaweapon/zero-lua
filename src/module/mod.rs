@@ -1,5 +1,5 @@
 use crate::Frame;
-use crate::ffi::{zl_pop, zl_pushvalue, zl_replace, zl_setfield, zl_setglobal};
+use crate::ffi::{lua_State, zl_pop, zl_pushvalue, zl_replace, zl_setfield, zl_setglobal};
 use crate::state::RawState;
 use std::ffi::{CStr, c_int};
 
@@ -41,12 +41,12 @@ where
         if self.has_value {
             let name = self.name.as_ref().as_ptr();
 
-            unsafe { zl_pushvalue(self.parent.state().get(), -1) };
-            unsafe { zl_setfield(self.parent.state().get(), -3, name) };
-            unsafe { zl_setglobal(self.parent.state().get(), name) };
+            unsafe { zl_pushvalue(self.parent.state(), -1) };
+            unsafe { zl_setfield(self.parent.state(), -3, name) };
+            unsafe { zl_setglobal(self.parent.state(), name) };
         }
 
-        unsafe { zl_pop(self.parent.state().get(), 1) };
+        unsafe { zl_pop(self.parent.state(), 1) };
     }
 }
 
@@ -55,10 +55,8 @@ where
     P: Frame,
     N: AsRef<CStr>,
 {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.parent.state()
     }
 
@@ -67,11 +65,11 @@ where
         let excess = n - 1;
 
         if excess > 0 {
-            unsafe { zl_pop(self.state().get(), excess) };
+            unsafe { zl_pop(self.state(), excess) };
         }
 
         if self.has_value {
-            unsafe { zl_replace(self.state().get(), -2) };
+            unsafe { zl_replace(self.state(), -2) };
         }
 
         self.has_value = true;

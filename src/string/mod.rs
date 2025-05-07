@@ -1,4 +1,4 @@
-use crate::ffi::{zl_pop, zl_tolstring};
+use crate::ffi::{lua_State, zl_pop, zl_tolstring};
 use crate::state::RawState;
 use crate::{Frame, FromOption, OptionError, Unknown};
 use std::ffi::{CStr, c_int};
@@ -26,7 +26,7 @@ impl<'p, P: Frame> Str<'p, P> {
     #[inline(always)]
     pub fn to_bytes(&mut self) -> &[u8] {
         let mut len = 0;
-        let ptr = unsafe { zl_tolstring(self.0.state().get(), -1, &mut len) };
+        let ptr = unsafe { zl_tolstring(self.0.state(), -1, &mut len) };
 
         unsafe { std::slice::from_raw_parts(ptr.cast(), len) }
     }
@@ -39,7 +39,7 @@ impl<'p, P: Frame> Str<'p, P> {
 
     #[inline(always)]
     pub fn to_c_str(&mut self) -> &CStr {
-        unsafe { CStr::from_ptr(zl_tolstring(self.0.state().get(), -1, null_mut())) }
+        unsafe { CStr::from_ptr(zl_tolstring(self.0.state(), -1, null_mut())) }
     }
 
     /// Invoke [`std::str::from_utf8()`] with the result of [`Self::to_bytes()`].
@@ -62,16 +62,14 @@ impl<P: Frame> Drop for Str<'_, P> {
 }
 
 impl<P: Frame> RawState for Str<'_, P> {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.0.state()
     }
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { zl_pop(self.state().get(), n) };
+        unsafe { zl_pop(self.state(), n) };
     }
 }
 

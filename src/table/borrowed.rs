@@ -1,5 +1,5 @@
 use super::TableGetter;
-use crate::ffi::zl_pop;
+use crate::ffi::{lua_State, zl_pop};
 use crate::state::RawState;
 use crate::{Frame, PositiveInt, Value};
 use std::ffi::c_int;
@@ -27,15 +27,13 @@ impl<'a, P: Frame> BorrowedTable<'a, P> {
 }
 
 impl<P: Frame> RawState for BorrowedTable<'_, P> {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.parent.state()
     }
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { zl_pop(self.state().get(), n) };
+        unsafe { zl_pop(self.state(), n) };
     }
 }

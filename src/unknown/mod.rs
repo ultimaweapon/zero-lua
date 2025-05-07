@@ -1,7 +1,7 @@
 pub use self::frame::*;
 pub use self::setter::*;
 
-use crate::ffi::{zl_gettop, zl_pop};
+use crate::ffi::{lua_State, zl_gettop, zl_pop};
 use crate::state::RawState;
 use crate::{Frame, PositiveInt};
 use std::ffi::c_int;
@@ -22,7 +22,7 @@ impl<P: Frame> Unknown<'_, P> {
 
     #[inline(always)]
     pub fn set(&mut self) -> (UnknownSetter, UnknownFrame<Self>) {
-        let state = self.0.state().get();
+        let state = self.0.state();
         let index = unsafe { zl_gettop(state) };
         let index = unsafe { PositiveInt::new_unchecked(index) };
 
@@ -38,15 +38,13 @@ impl<P: Frame> Drop for Unknown<'_, P> {
 }
 
 impl<P: Frame> RawState for Unknown<'_, P> {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.0.state()
     }
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { zl_pop(self.state().get(), n) };
+        unsafe { zl_pop(self.state(), n) };
     }
 }

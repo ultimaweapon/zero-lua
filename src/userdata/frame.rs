@@ -1,5 +1,5 @@
 use crate::Frame;
-use crate::ffi::{zl_pop, zl_replace, zl_setiuservalue};
+use crate::ffi::{lua_State, zl_pop, zl_replace, zl_setiuservalue};
 use crate::state::RawState;
 use std::ffi::c_int;
 use std::num::NonZero;
@@ -30,16 +30,14 @@ impl<P: Frame> Drop for UserFrame<'_, P> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.has_value {
-            unsafe { zl_setiuservalue(self.parent.state().get(), self.ud, self.uv.get()) };
+            unsafe { zl_setiuservalue(self.parent.state(), self.ud, self.uv.get()) };
         }
     }
 }
 
 impl<P: Frame> RawState for UserFrame<'_, P> {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.parent.state()
     }
 
@@ -49,11 +47,11 @@ impl<P: Frame> RawState for UserFrame<'_, P> {
         let excess = n - 1;
 
         if excess > 0 {
-            unsafe { zl_pop(self.state().get(), excess) };
+            unsafe { zl_pop(self.state(), excess) };
         }
 
         if self.has_value {
-            unsafe { zl_replace(self.state().get(), -2) };
+            unsafe { zl_replace(self.state(), -2) };
         }
 
         self.has_value = true;

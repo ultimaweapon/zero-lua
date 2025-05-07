@@ -1,54 +1,40 @@
 use crate::YieldValues;
 use crate::ffi::lua_State;
-use crate::state::State;
 use std::cell::Cell;
-use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
-/// Encapsulates [`State`] passed to `lua_CFunction`.
-pub trait LocalState: DerefMut<Target = State> {}
+/// Encapsulates `lua_State` passed to `lua_CFunction`.
+pub trait LocalState {
+    fn get(&mut self) -> *mut lua_State;
+}
 
-/// Encapsulates [`State`] passed to `lua_CFunction` for non-yieldable function.
-pub struct NonYieldable(State);
+/// Encapsulates a `lua_State` passed to `lua_CFunction` for non-yieldable function.
+pub struct NonYieldable(*mut lua_State);
 
 impl NonYieldable {
     #[inline(always)]
     pub(crate) unsafe fn new(state: *mut lua_State) -> Self {
-        Self(State::new(state))
+        Self(state)
     }
 }
 
-impl Deref for NonYieldable {
-    type Target = State;
-
+impl LocalState for NonYieldable {
     #[inline(always)]
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    fn get(&mut self) -> *mut lua_State {
+        self.0
     }
 }
 
-impl DerefMut for NonYieldable {
-    #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl LocalState for NonYieldable {}
-
-/// Encapsulates [`State`] passed to `lua_CFunction` for yieldable function.
+/// Encapsulates `lua_State` passed to `lua_CFunction` for yieldable function.
 pub struct Yieldable {
-    state: State,
+    state: *mut lua_State,
     values: Rc<Cell<YieldValues>>,
 }
 
 impl Yieldable {
     #[inline(always)]
     pub(crate) unsafe fn new(state: *mut lua_State, values: Rc<Cell<YieldValues>>) -> Self {
-        Self {
-            state: State::new(state),
-            values,
-        }
+        Self { state, values }
     }
 
     #[inline(always)]
@@ -57,20 +43,9 @@ impl Yieldable {
     }
 }
 
-impl Deref for Yieldable {
-    type Target = State;
-
+impl LocalState for Yieldable {
     #[inline(always)]
-    fn deref(&self) -> &Self::Target {
-        &self.state
+    fn get(&mut self) -> *mut lua_State {
+        self.state
     }
 }
-
-impl DerefMut for Yieldable {
-    #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.state
-    }
-}
-
-impl LocalState for Yieldable {}

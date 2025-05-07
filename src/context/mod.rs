@@ -1,12 +1,12 @@
 pub use self::state::*;
 
 use crate::ffi::{
-    zl_argerror, zl_checklstring, zl_error, zl_getfield, zl_getiuservalue, zl_getmetatable,
-    zl_isnil, zl_istable, zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
+    lua_State, zl_argerror, zl_checklstring, zl_error, zl_getfield, zl_getiuservalue,
+    zl_getmetatable, zl_isnil, zl_istable, zl_pop, zl_tolstring, zl_touserdata, zl_typeerror,
 };
 use crate::state::RawState;
 use crate::{
-    BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, TYPE_ID, UserType, is_boxed,
+    BorrowedTable, BorrowedUd, Error, ErrorKind, PositiveInt, TYPE_ID, UserType, Yield, is_boxed,
 };
 use std::any::TypeId;
 use std::ffi::c_int;
@@ -36,6 +36,10 @@ impl<'a, S: LocalState> Context<'a, S> {
         }
     }
 
+    pub(crate) fn state(&mut self) -> &mut S {
+        &mut self.state
+    }
+
     /// Returns number of arguments for the current function. This also the index of the last
     /// argument.
     #[inline(always)]
@@ -50,7 +54,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     /// # Panics
     /// If `n` is zero or negative.
     #[inline(always)]
-    pub fn is_nil(&self, n: PositiveInt) -> bool {
+    pub fn is_nil(&mut self, n: PositiveInt) -> bool {
         if n <= self.args {
             unsafe { zl_isnil(self.state.get(), n.get()) }
         } else {
@@ -62,7 +66,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     /// string.
     ///
     /// This method always raise a Lua error if `n` is not a function argument.
-    pub fn to_str(&self, n: PositiveInt) -> &'a str {
+    pub fn to_str(&mut self, n: PositiveInt) -> &'a str {
         match std::str::from_utf8(self.to_bytes(n)) {
             Ok(v) => v,
             Err(e) => self.raise(Error::arg_from_std(n, e)),
@@ -74,7 +78,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     ///
     /// This method return [`None`] if the argument is not a string or `n` is not a function
     /// argument.
-    pub fn try_str(&self, n: PositiveInt) -> Option<&'a str> {
+    pub fn try_str(&mut self, n: PositiveInt) -> Option<&'a str> {
         if n > self.args {
             return None;
         }
@@ -97,7 +101,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     }
 
     #[inline(always)]
-    pub fn to_bytes(&self, n: PositiveInt) -> &'a [u8] {
+    pub fn to_bytes(&mut self, n: PositiveInt) -> &'a [u8] {
         if n > self.args {
             // luaL_checklstring require a valid index so we need to emulate its behavior in this
             // case.
@@ -188,7 +192,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     }
 
     #[inline(never)]
-    pub(crate) fn raise(&self, e: Error) -> ! {
+    pub(crate) fn raise(&mut self, e: Error) -> ! {
         let (n, e) = match e.into() {
             // SAFETY: n only used to format the message.
             ErrorKind::Arg(n, e) => unsafe {
@@ -208,7 +212,7 @@ impl<'a, S: LocalState> Context<'a, S> {
     }
 
     #[inline(never)]
-    fn arg_out_of_bound(&self, n: PositiveInt, expect: &[u8]) -> ! {
+    fn arg_out_of_bound(&mut self, n: PositiveInt, expect: &[u8]) -> ! {
         let s = b" expected, got nil";
         let mut m = Vec::with_capacity(expect.len() + s.len() + 1);
 
@@ -220,12 +224,17 @@ impl<'a, S: LocalState> Context<'a, S> {
     }
 }
 
-impl<S: LocalState> RawState for Context<'_, S> {
-    type State = S;
-
+impl<'a> Context<'a, Yieldable> {
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
-        &mut self.state
+    pub fn as_yield(&mut self) -> Yield<'_, 'a> {
+        Yield::new(self)
+    }
+}
+
+impl<S: LocalState> RawState for Context<'_, S> {
+    #[inline(always)]
+    fn state(&mut self) -> *mut lua_State {
+        self.state.get()
     }
 
     #[inline(always)]

@@ -1,5 +1,5 @@
 use super::{TypedUd, UserData, UserFrame, UserType};
-use crate::ffi::zl_pop;
+use crate::ffi::{lua_State, zl_pop};
 use crate::state::RawState;
 use crate::{Frame, Unknown, Value};
 use std::ffi::c_int;
@@ -64,16 +64,14 @@ where
 }
 
 impl<P: Frame, T> RawState for OwnedUd<'_, P, T> {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.parent.state()
     }
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { zl_pop(self.state().get(), n) };
+        unsafe { zl_pop(self.state(), n) };
     }
 }
 

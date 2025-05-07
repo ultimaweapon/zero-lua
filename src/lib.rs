@@ -99,18 +99,18 @@ impl<'a, P: Frame> Value<'a, P> {
 
         // SAFETY: We have an exclusive access to the value, which mean top of the stack always be a
         // value.
-        match unsafe { zl_getmetafield(state.get(), -1, c"__name".as_ptr()) } {
+        match unsafe { zl_getmetafield(state, -1, c"__name".as_ptr()) } {
             Type::None => unreachable!(),
             Type::Nil => (), // luaL_getmetafield push nothing.
             Type::String => unsafe {
-                let v = zl_tolstring(state.get(), -1, null_mut());
+                let v = zl_tolstring(state, -1, null_mut());
                 let v = CStr::from_ptr(v).to_owned();
 
-                zl_pop(state.get(), 1);
+                zl_pop(state, 1);
 
                 return v.into();
             },
-            _ => unsafe { zl_pop(state.get(), 1) },
+            _ => unsafe { zl_pop(state, 1) },
         }
 
         Cow::Borrowed(self.ty().name())
@@ -118,7 +118,7 @@ impl<'a, P: Frame> Value<'a, P> {
 
     #[inline(always)]
     pub(crate) unsafe fn from_table<K: TableGetter>(p: &'a mut P, t: c_int, k: K) -> Self {
-        match unsafe { k.get_value(p.state().get(), t) } {
+        match unsafe { k.get_value(p.state(), t) } {
             Type::None => unreachable!(),
             Type::Nil => Self::Nil(unsafe { Nil::new(p) }),
             Type::Boolean => Self::Boolean(unsafe { Bool::new(p) }),
@@ -134,9 +134,9 @@ impl<'a, P: Frame> Value<'a, P> {
 
     #[inline(always)]
     pub(crate) unsafe fn from_uv(p: &'a mut P, d: c_int, v: u16) -> Option<Self> {
-        let v = match unsafe { zl_getiuservalue(p.state().get(), d, v) } {
+        let v = match unsafe { zl_getiuservalue(p.state(), d, v) } {
             Type::None => {
-                unsafe { zl_pop(p.state().get(), 1) };
+                unsafe { zl_pop(p.state(), 1) };
                 return None;
             }
             Type::Nil => Value::Nil(unsafe { Nil::new(p) }),

@@ -2,7 +2,7 @@ pub use self::result::*;
 
 use self::resume::Resume;
 use super::Ret;
-use crate::ffi::{LUA_OK, LUA_YIELD, zl_pop};
+use crate::ffi::{LUA_OK, LUA_YIELD, lua_State, zl_pop};
 use crate::state::RawState;
 use crate::{Frame, Str};
 use std::cell::Cell;
@@ -45,7 +45,7 @@ impl<'a, P: Frame> AsyncCall<'a, P> {
     {
         let mut n = 0;
         let f = Resume::new(
-            self.result.state(),
+            &mut self.result,
             &mut self.args,
             &self.values,
             &mut n,
@@ -70,20 +70,18 @@ impl<P: Frame> Drop for AsyncCall<'_, P> {
         }
 
         if self.args != 0 {
-            unsafe { zl_pop(self.state().get(), self.args) };
+            unsafe { zl_pop(self.state(), self.args) };
         }
 
         if !self.polled {
-            unsafe { zl_pop(self.state().get(), 1) };
+            unsafe { zl_pop(self.state(), 1) };
         }
     }
 }
 
 impl<P: Frame> RawState for AsyncCall<'_, P> {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.result.state()
     }
 

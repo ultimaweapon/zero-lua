@@ -1,6 +1,6 @@
 use super::TableSetter;
 use crate::Frame;
-use crate::ffi::{zl_pop, zl_replace};
+use crate::ffi::{lua_State, zl_pop, zl_replace};
 use crate::state::RawState;
 use std::ffi::c_int;
 
@@ -45,7 +45,7 @@ where
     #[inline(always)]
     fn drop(&mut self) {
         if self.has_value {
-            unsafe { self.key.set_value(self.parent.state().get(), self.table) };
+            unsafe { self.key.set_value(self.parent.state(), self.table) };
         }
     }
 }
@@ -55,10 +55,8 @@ where
     P: Frame,
     K: TableSetter,
 {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.parent.state()
     }
 
@@ -69,11 +67,11 @@ where
         let excess = n - 1;
 
         if excess > 0 {
-            unsafe { zl_pop(self.state().get(), excess) };
+            unsafe { zl_pop(self.state(), excess) };
         }
 
         if self.has_value {
-            unsafe { zl_replace(self.state().get(), -2) };
+            unsafe { zl_replace(self.state(), -2) };
         }
 
         self.has_value = true;

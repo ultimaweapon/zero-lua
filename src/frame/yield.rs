@@ -1,7 +1,6 @@
-use super::Frame;
-use crate::ffi::zl_pop;
+use crate::ffi::{lua_State, zl_pop};
 use crate::state::RawState;
-use crate::{Ret, YieldValues, Yieldable};
+use crate::{Context, LocalState, Ret, YieldValues, Yieldable};
 use std::cell::Cell;
 use std::ffi::c_int;
 use std::future::poll_fn;
@@ -9,24 +8,21 @@ use std::ops::Deref;
 use std::task::Poll;
 
 /// Provides method to yield from Lua thread.
-pub struct Yield<'a, P: Frame> {
-    parent: Option<&'a mut P>,
+pub struct Yield<'a, 'b> {
+    parent: Option<&'a mut Context<'b, Yieldable>>,
     values: c_int,
 }
 
-impl<'a, P> Yield<'a, P>
-where
-    P: Frame<State = Yieldable>,
-{
+impl<'a, 'b> Yield<'a, 'b> {
     #[inline(always)]
-    pub(super) fn new(parent: &'a mut P) -> Self {
+    pub(crate) fn new(parent: &'a mut Context<'b, Yieldable>) -> Self {
         Self {
             parent: Some(parent),
             values: 0,
         }
     }
 
-    pub async fn yield_now(mut self) -> Ret<'a, P> {
+    pub async fn yield_now(mut self) -> Ret<'a, Context<'b, Yieldable>> {
         // Set values to yield.
         let parent = self.parent.take().unwrap();
         let values = ValuesGuard(parent.state());
@@ -50,21 +46,19 @@ where
     }
 }
 
-impl<P: Frame> Drop for Yield<'_, P> {
+impl Drop for Yield<'_, '_> {
     #[inline(always)]
     fn drop(&mut self) {
         if self.values != 0 {
-            unsafe { zl_pop(self.state().get(), self.values) };
+            unsafe { zl_pop(self.state(), self.values) };
         }
     }
 }
 
-impl<P: Frame> RawState for Yield<'_, P> {
-    type State = P::State;
-
+impl RawState for Yield<'_, '_> {
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
-        self.parent.as_mut().unwrap().state()
+    fn state(&mut self) -> *mut lua_State {
+        self.parent.as_mut().unwrap().state().get()
     }
 
     #[inline(always)]

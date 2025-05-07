@@ -2,7 +2,7 @@ pub use self::borrowed::*;
 pub use self::frame::*;
 pub use self::key::*;
 
-use crate::ffi::zl_pop;
+use crate::ffi::{lua_State, zl_pop};
 use crate::state::RawState;
 use crate::{Frame, Unknown};
 use std::ffi::c_int;
@@ -47,16 +47,14 @@ impl<P: Frame> Drop for Table<'_, P> {
 }
 
 impl<P: Frame> RawState for Table<'_, P> {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.0.state()
     }
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { zl_pop(self.state().get(), n) };
+        unsafe { zl_pop(self.state(), n) };
     }
 }
 

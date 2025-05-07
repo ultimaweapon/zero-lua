@@ -75,11 +75,9 @@ impl Lua {
 }
 
 impl RawState for Lua {
-    type State = MainState;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
-        &mut self.0
+    fn state(&mut self) -> *mut lua_State {
+        self.0.get()
     }
 
     #[inline(always)]

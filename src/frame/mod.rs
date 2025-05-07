@@ -60,18 +60,18 @@ pub trait Frame: RawState {
     /// [`UserType::register()`] implemented on `T`.
     fn try_register_ud<T: UserType>(&mut self) -> bool {
         // Check if exists.
-        if unsafe { zl_newmetatable(self.state().get(), T::name().as_ptr()) == 0 } {
-            unsafe { zl_pop(self.state().get(), 1) };
+        if unsafe { zl_newmetatable(self.state(), T::name().as_ptr()) == 0 } {
+            unsafe { zl_pop(self.state(), 1) };
             return false;
         }
 
         T::setup(&mut ManuallyDrop::new(unsafe { Table::new(self) }));
 
         // Check if user supplied typeid.
-        match unsafe { zl_getfield(self.state().get(), -1, TYPE_ID.as_ptr()) } {
-            Type::Nil => unsafe { zl_pop(self.state().get(), 1) },
+        match unsafe { zl_getfield(self.state(), -1, TYPE_ID.as_ptr()) } {
+            Type::Nil => unsafe { zl_pop(self.state(), 1) },
             _ => unsafe {
-                zl_pop(self.state().get(), 2);
+                zl_pop(self.state(), 2);
 
                 panic!(
                     "UserType::setup() implementation on {} put a reserved '{}' to metatable",
@@ -82,10 +82,10 @@ pub trait Frame: RawState {
         }
 
         // Check if user supplied __gc.
-        match unsafe { zl_getfield(self.state().get(), -1, c"__gc".as_ptr()) } {
-            Type::Nil => unsafe { zl_pop(self.state().get(), 1) },
+        match unsafe { zl_getfield(self.state(), -1, c"__gc".as_ptr()) } {
+            Type::Nil => unsafe { zl_pop(self.state(), 1) },
             _ => unsafe {
-                zl_pop(self.state().get(), 2);
+                zl_pop(self.state(), 2);
 
                 panic!(
                     "UserType::setup() implementation on {} put a reserved '__gc' to metatable",
@@ -95,21 +95,21 @@ pub trait Frame: RawState {
         }
 
         // Set "typeid".
-        let ud = unsafe { zl_newuserdatauv(self.state().get(), size_of::<TypeId>(), 0) };
+        let ud = unsafe { zl_newuserdatauv(self.state(), size_of::<TypeId>(), 0) };
 
         unsafe { ud.cast::<TypeId>().write_unaligned(TypeId::of::<T>()) };
-        unsafe { zl_setfield(self.state().get(), -2, TYPE_ID.as_ptr()) };
+        unsafe { zl_setfield(self.state(), -2, TYPE_ID.as_ptr()) };
 
         // Set finalizer.
         if is_boxed::<T>() {
-            unsafe { zl_pushcclosure(self.state().get(), finalizer::<Box<T>>, 0) };
-            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_pushcclosure(self.state(), finalizer::<Box<T>>, 0) };
+            unsafe { zl_setfield(self.state(), -2, c"__gc".as_ptr()) };
         } else if std::mem::needs_drop::<T>() {
-            unsafe { zl_pushcclosure(self.state().get(), finalizer::<T>, 0) };
-            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_pushcclosure(self.state(), finalizer::<T>, 0) };
+            unsafe { zl_setfield(self.state(), -2, c"__gc".as_ptr()) };
         }
 
-        unsafe { zl_pop(self.state().get(), 1) };
+        unsafe { zl_pop(self.state(), 1) };
 
         // Add to global.
         T::register(GlobalSetter::new(self, T::name()));
@@ -127,7 +127,7 @@ pub trait Frame: RawState {
     /// If memory is not enough.
     #[inline(always)]
     fn require_base(&mut self) -> Table<Self> {
-        unsafe { zl_require_base(self.state().get()) };
+        unsafe { zl_require_base(self.state()) };
         unsafe { Table::new(self) }
     }
 
@@ -143,54 +143,54 @@ pub trait Frame: RawState {
     /// If memory is not enough.
     #[inline(always)]
     fn require_coroutine(&mut self, global: bool) -> Table<Self> {
-        unsafe { zl_require_coroutine(self.state().get(), global) };
+        unsafe { zl_require_coroutine(self.state(), global) };
         unsafe { Table::new(self) }
     }
 
     #[inline(always)]
     fn require_io(&mut self, global: bool) -> Table<Self> {
-        unsafe { zl_require_io(self.state().get(), global) };
+        unsafe { zl_require_io(self.state(), global) };
         unsafe { Table::new(self) }
     }
 
     #[inline(always)]
     fn require_math(&mut self, global: bool) -> Table<Self> {
-        unsafe { zl_require_math(self.state().get(), global) };
+        unsafe { zl_require_math(self.state(), global) };
         unsafe { Table::new(self) }
     }
 
     #[inline(always)]
     fn require_os(&mut self, global: bool) -> Table<Self> {
-        unsafe { zl_require_os(self.state().get(), global) };
+        unsafe { zl_require_os(self.state(), global) };
         unsafe { Table::new(self) }
     }
 
     #[inline(always)]
     fn require_string(&mut self, global: bool) -> Table<Self> {
-        unsafe { zl_require_string(self.state().get(), global) };
+        unsafe { zl_require_string(self.state(), global) };
         unsafe { Table::new(self) }
     }
 
     #[inline(always)]
     fn require_table(&mut self, global: bool) -> Table<Self> {
-        unsafe { zl_require_table(self.state().get(), global) };
+        unsafe { zl_require_table(self.state(), global) };
         unsafe { Table::new(self) }
     }
 
     #[inline(always)]
     fn require_utf8(&mut self, global: bool) -> Table<Self> {
-        unsafe { zl_require_utf8(self.state().get(), global) };
+        unsafe { zl_require_utf8(self.state(), global) };
         unsafe { Table::new(self) }
     }
 
     #[inline(always)]
     fn register_module<N: AsRef<CStr>>(&mut self, name: N) -> Option<ModuleBuilder<Self, N>> {
-        unsafe { zl_getsubtable(self.state().get(), ZL_REGISTRYINDEX, ZL_LOADED_TABLE) };
+        unsafe { zl_getsubtable(self.state(), ZL_REGISTRYINDEX, ZL_LOADED_TABLE) };
 
-        match unsafe { zl_getfield(self.state().get(), -1, name.as_ref().as_ptr()) } {
+        match unsafe { zl_getfield(self.state(), -1, name.as_ref().as_ptr()) } {
             Type::None => unreachable!(),
             Type::Nil => {
-                unsafe { zl_pop(self.state().get(), 1) };
+                unsafe { zl_pop(self.state(), 1) };
                 Some(unsafe { ModuleBuilder::new(self, name) })
             }
             _ => None,
@@ -220,7 +220,7 @@ pub trait Frame: RawState {
 
         match unsafe {
             zl_load(
-                self.state().get(),
+                self.state(),
                 name,
                 chunk.as_ptr().cast(),
                 chunk.len(),
@@ -262,13 +262,13 @@ pub trait Frame: RawState {
 
     #[inline(always)]
     fn push_nil(&mut self) -> Nil<Self> {
-        unsafe { zl_pushnil(self.state().get()) };
+        unsafe { zl_pushnil(self.state()) };
         unsafe { Nil::new(self) }
     }
 
     #[inline(always)]
     fn push_bool(&mut self, v: bool) -> Bool<Self> {
-        unsafe { zl_pushboolean(self.state().get(), v) };
+        unsafe { zl_pushboolean(self.state(), v) };
         unsafe { Bool::new(self) }
     }
 
@@ -276,13 +276,13 @@ pub trait Frame: RawState {
     fn push_str(&mut self, v: impl AsRef<[u8]>) -> Str<Self> {
         let v = v.as_ref();
 
-        unsafe { zl_pushlstring(self.state().get(), v.as_ptr().cast(), v.len()) };
+        unsafe { zl_pushlstring(self.state(), v.as_ptr().cast(), v.len()) };
         unsafe { Str::new(self) }
     }
 
     #[inline(always)]
     fn push_table(&mut self, narr: u16, nrec: u16) -> Table<Self> {
-        unsafe { zl_createtable(self.state().get(), narr.into(), nrec.into()) };
+        unsafe { zl_createtable(self.state(), narr.into(), nrec.into()) };
 
         unsafe { Table::new(self) }
     }
@@ -296,38 +296,38 @@ pub trait Frame: RawState {
 
         if align_of::<Fuse<I>>() > align_of::<*mut ()>() {
             // Push iterator function.
-            unsafe { zl_pushcclosure(self.state().get(), self::iter::next::<Box<Fuse<I>>>, 0) };
+            unsafe { zl_pushcclosure(self.state(), self::iter::next::<Box<Fuse<I>>>, 0) };
 
             // Push state.
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<Fuse<I>>>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state(), size_of::<Box<Fuse<I>>>(), 0) };
 
             unsafe { ptr.cast::<Box<Fuse<I>>>().write(v.into()) };
 
             // Set finalizer.
-            unsafe { zl_createtable(self.state().get(), 0, 1) };
-            unsafe { zl_pushcclosure(self.state().get(), finalizer::<Box<Fuse<I>>>, 0) };
-            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
-            unsafe { zl_setmetatable(self.state().get(), -2) };
+            unsafe { zl_createtable(self.state(), 0, 1) };
+            unsafe { zl_pushcclosure(self.state(), finalizer::<Box<Fuse<I>>>, 0) };
+            unsafe { zl_setfield(self.state(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_setmetatable(self.state(), -2) };
         } else {
             // Push iterator function.
-            unsafe { zl_pushcclosure(self.state().get(), self::iter::next::<Fuse<I>>, 0) };
+            unsafe { zl_pushcclosure(self.state(), self::iter::next::<Fuse<I>>, 0) };
 
             // Push state.
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Fuse<I>>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state(), size_of::<Fuse<I>>(), 0) };
 
             unsafe { ptr.cast::<Fuse<I>>().write(v) };
 
             // Set finalizer.
             if std::mem::needs_drop::<Fuse<I>>() {
-                unsafe { zl_createtable(self.state().get(), 0, 1) };
-                unsafe { zl_pushcclosure(self.state().get(), finalizer::<Fuse<I>>, 0) };
-                unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
-                unsafe { zl_setmetatable(self.state().get(), -2) };
+                unsafe { zl_createtable(self.state(), 0, 1) };
+                unsafe { zl_pushcclosure(self.state(), finalizer::<Fuse<I>>, 0) };
+                unsafe { zl_setfield(self.state(), -2, c"__gc".as_ptr()) };
+                unsafe { zl_setmetatable(self.state(), -2) };
             }
         }
 
         // Push control variable.
-        unsafe { zl_pushnil(self.state().get()) };
+        unsafe { zl_pushnil(self.state()) };
 
         unsafe { Iter::new(self) }
     }
@@ -338,13 +338,13 @@ pub trait Frame: RawState {
         // Create userdata.
         let nuvalue = T::user_values().map(|v| v.get()).unwrap_or(0).into();
         let ptr = if is_boxed::<T>() {
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<T>>(), nuvalue) };
+            let ptr = unsafe { zl_newuserdatauv(self.state(), size_of::<Box<T>>(), nuvalue) };
             let ptr = ptr.cast::<Box<T>>();
 
             unsafe { ptr.write(v.into()) };
             unsafe { (*ptr).as_ref() as *const T }
         } else {
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<T>(), nuvalue) };
+            let ptr = unsafe { zl_newuserdatauv(self.state(), size_of::<T>(), nuvalue) };
             let ptr = ptr.cast::<T>();
 
             unsafe { ptr.write(v) };
@@ -352,8 +352,8 @@ pub trait Frame: RawState {
         };
 
         // Set metatable.
-        unsafe { push_metatable::<T>(self.state().get()) };
-        unsafe { zl_setmetatable(self.state().get(), -2) };
+        unsafe { push_metatable::<T>(self.state()) };
+        unsafe { zl_setmetatable(self.state(), -2) };
 
         unsafe { OwnedUd::new(self, ptr) }
     }
@@ -364,37 +364,37 @@ pub trait Frame: RawState {
         F: Fn(&mut Context<NonYieldable>) -> Result<(), Error> + 'static,
     {
         if size_of::<F>() == 0 {
-            unsafe { zl_pushcclosure(self.state().get(), invoker::<F>, 0) };
+            unsafe { zl_pushcclosure(self.state(), invoker::<F>, 0) };
         } else if align_of::<F>() <= align_of::<*mut ()>() {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<F>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state(), size_of::<F>(), 0) };
 
             unsafe { ptr.cast::<F>().write(f) };
 
             // Set finalizer.
             if std::mem::needs_drop::<F>() {
-                unsafe { zl_createtable(self.state().get(), 0, 1) };
-                unsafe { zl_pushcclosure(self.state().get(), finalizer::<F>, 0) };
-                unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
-                unsafe { zl_setmetatable(self.state().get(), -2) };
+                unsafe { zl_createtable(self.state(), 0, 1) };
+                unsafe { zl_pushcclosure(self.state(), finalizer::<F>, 0) };
+                unsafe { zl_setfield(self.state(), -2, c"__gc".as_ptr()) };
+                unsafe { zl_setmetatable(self.state(), -2) };
             }
 
             // Push invoker.
-            unsafe { zl_pushcclosure(self.state().get(), invoker::<F>, 1) };
+            unsafe { zl_pushcclosure(self.state(), invoker::<F>, 1) };
         } else {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<F>>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state(), size_of::<Box<F>>(), 0) };
 
             unsafe { ptr.cast::<Box<F>>().write(f.into()) };
 
             // Set finalizer.
-            unsafe { zl_createtable(self.state().get(), 0, 1) };
-            unsafe { zl_pushcclosure(self.state().get(), finalizer::<Box<F>>, 0) };
-            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
-            unsafe { zl_setmetatable(self.state().get(), -2) };
+            unsafe { zl_createtable(self.state(), 0, 1) };
+            unsafe { zl_pushcclosure(self.state(), finalizer::<Box<F>>, 0) };
+            unsafe { zl_setfield(self.state(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_setmetatable(self.state(), -2) };
 
             // Push invoker.
-            unsafe { zl_pushcclosure(self.state().get(), invoker::<Box<F>>, 1) };
+            unsafe { zl_pushcclosure(self.state(), invoker::<Box<F>>, 1) };
         }
 
         unsafe { Function::new(self) }
@@ -406,37 +406,37 @@ pub trait Frame: RawState {
         F: AsyncFn(&mut Context<Yieldable>) -> Result<(), Error> + 'static,
     {
         if size_of::<F>() == 0 {
-            unsafe { zl_pushcclosure(self.state().get(), async_invoker::<F>, 0) };
+            unsafe { zl_pushcclosure(self.state(), async_invoker::<F>, 0) };
         } else if align_of::<F>() <= align_of::<*mut ()>() {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<F>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state(), size_of::<F>(), 0) };
 
             unsafe { ptr.cast::<F>().write(f) };
 
             // Set finalizer.
             if std::mem::needs_drop::<F>() {
-                unsafe { zl_createtable(self.state().get(), 0, 1) };
-                unsafe { zl_pushcclosure(self.state().get(), finalizer::<F>, 0) };
-                unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
-                unsafe { zl_setmetatable(self.state().get(), -2) };
+                unsafe { zl_createtable(self.state(), 0, 1) };
+                unsafe { zl_pushcclosure(self.state(), finalizer::<F>, 0) };
+                unsafe { zl_setfield(self.state(), -2, c"__gc".as_ptr()) };
+                unsafe { zl_setmetatable(self.state(), -2) };
             }
 
             // Push invoker.
-            unsafe { zl_pushcclosure(self.state().get(), async_invoker::<F>, 1) };
+            unsafe { zl_pushcclosure(self.state(), async_invoker::<F>, 1) };
         } else {
             // Move Rust function to Lua user data.
-            let ptr = unsafe { zl_newuserdatauv(self.state().get(), size_of::<Box<F>>(), 0) };
+            let ptr = unsafe { zl_newuserdatauv(self.state(), size_of::<Box<F>>(), 0) };
 
             unsafe { ptr.cast::<Box<F>>().write(f.into()) };
 
             // Set finalizer.
-            unsafe { zl_createtable(self.state().get(), 0, 1) };
-            unsafe { zl_pushcclosure(self.state().get(), finalizer::<Box<F>>, 0) };
-            unsafe { zl_setfield(self.state().get(), -2, c"__gc".as_ptr()) };
-            unsafe { zl_setmetatable(self.state().get(), -2) };
+            unsafe { zl_createtable(self.state(), 0, 1) };
+            unsafe { zl_pushcclosure(self.state(), finalizer::<Box<F>>, 0) };
+            unsafe { zl_setfield(self.state(), -2, c"__gc".as_ptr()) };
+            unsafe { zl_setmetatable(self.state(), -2) };
 
             // Push invoker.
-            unsafe { zl_pushcclosure(self.state().get(), async_invoker::<Box<F>>, 1) };
+            unsafe { zl_pushcclosure(self.state(), async_invoker::<Box<F>>, 1) };
         }
 
         unsafe { Function::new(self) }
@@ -447,15 +447,7 @@ pub trait Frame: RawState {
     /// of memory).
     #[inline(always)]
     fn ensure_stack(&mut self, n: PositiveInt) {
-        unsafe { zl_checkstack(self.state().get(), n.get()) };
-    }
-
-    #[inline(always)]
-    fn as_yield(&mut self) -> Yield<Self>
-    where
-        Self: RawState<State = Yieldable>,
-    {
-        Yield::new(self)
+        unsafe { zl_checkstack(self.state(), n.get()) };
     }
 }
 

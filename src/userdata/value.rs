@@ -1,5 +1,5 @@
 use super::{OwnedUd, UserType, is_boxed};
-use crate::ffi::{zl_getfield, zl_getmetatable, zl_pop, zl_touserdata};
+use crate::ffi::{lua_State, zl_getfield, zl_getmetatable, zl_pop, zl_touserdata};
 use crate::state::RawState;
 use crate::{Frame, TYPE_ID, Unknown};
 use std::any::TypeId;
@@ -20,25 +20,25 @@ impl<'p, P: Frame> UserData<'p, P> {
 
     pub fn downcast<T: UserType>(mut self) -> Result<OwnedUd<'p, P, T>, Self> {
         // Get metatable.
-        if unsafe { zl_getmetatable(self.state().get(), -1) == 0 } {
+        if unsafe { zl_getmetatable(self.state(), -1) == 0 } {
             return Err(self);
         }
 
-        unsafe { zl_getfield(self.state().get(), -1, TYPE_ID.as_ptr()) };
+        unsafe { zl_getfield(self.state(), -1, TYPE_ID.as_ptr()) };
 
         // SAFETY: TypeId is Copy.
         let id = TypeId::of::<T>();
-        let ud = unsafe { zl_touserdata(self.state().get(), -1) };
+        let ud = unsafe { zl_touserdata(self.state(), -1) };
         let ok = unsafe { !ud.is_null() && ud.cast::<TypeId>().read_unaligned() == id };
 
-        unsafe { zl_pop(self.state().get(), 2) };
+        unsafe { zl_pop(self.state(), 2) };
 
         if !ok {
             return Err(self);
         }
 
         // Get pointer to UD.
-        let ptr = unsafe { zl_touserdata(self.state().get(), -1).cast_const() };
+        let ptr = unsafe { zl_touserdata(self.state(), -1).cast_const() };
         let ptr = if is_boxed::<T>() {
             unsafe { (*ptr.cast::<Box<T>>()).as_ref() }
         } else {
@@ -69,16 +69,14 @@ impl<'p, P: Frame, T> From<OwnedUd<'p, P, T>> for UserData<'p, P> {
 }
 
 impl<P: Frame> RawState for UserData<'_, P> {
-    type State = P::State;
-
     #[inline(always)]
-    fn state(&mut self) -> &mut Self::State {
+    fn state(&mut self) -> *mut lua_State {
         self.0.state()
     }
 
     #[inline(always)]
     unsafe fn release_values(&mut self, n: c_int) {
-        unsafe { zl_pop(self.state().get(), n) };
+        unsafe { zl_pop(self.state(), n) };
     }
 }
 
